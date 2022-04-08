@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package market;
+
+import "google/protobuf/empty.proto";
+
+
+service MarketController {
+    rpc ListOffers(ListRequest) returns (Offer) {}
+}
+
+message ListRequest {}
+
+message Offer {
+    int64 IAID = 1; // ISD-AS ID
+    // Signature
+    // Validity 
+    // ReachablePaths
+    // QoSClass
+    // PricePerUnit
+    // BWProfile
+}
