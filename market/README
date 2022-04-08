@@ -5,3 +5,20 @@ on the whiteboard, and buyers can buy part or the total amount of the offer.
 
 An offer contains a bandwidth profile (bandwidth vs time) and a path policy (what ASes can
 be reached using this offer).
+
+## Development
+
+### Install pip packages:
+```bash
+python3 -m venv .venv
+echo '*' > .venv/.gitignore
+source .venv/bin/activate
+pip install --require-hashes -r requirements.txt
+```
+
+### Add new dependencies:
+The project uses pip-tools. Edit the `requirements.in` file and generate a new `requirements.txt`
+for pip to use:
+```bash
+pip-compile --generate-hashes --output-file=requirements.txt requirements.in
+```

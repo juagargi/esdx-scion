@@ -1,0 +1,7 @@
+Django>=3
+django
+djangorestframework
+djangogrpcframework>=0.2.1
+grpcio
+grpcio-tools
+pip-tools
