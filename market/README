@@ -20,5 +20,5 @@ pip install --require-hashes -r requirements.txt
 The project uses pip-tools. Edit the `requirements.in` file and generate a new `requirements.txt`
 for pip to use:
 ```bash
-pip-compile --generate-hashes --output-file=requirements.txt requirements.in
+pip-compile --generate-hashes --allow-unsafe --output-file=requirements.txt requirements.in
 ```
