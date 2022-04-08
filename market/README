@@ -1,0 +1,7 @@
+# Spot Market
+
+The spot market is a virtual market where sellers can post their bandwidth offers
+on the whiteboard, and buyers can buy part or the total amount of the offer.
+
+An offer contains a bandwidth profile (bandwidth vs time) and a path policy (what ASes can
+be reached using this offer).
