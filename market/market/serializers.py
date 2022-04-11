@@ -7,4 +7,4 @@ class OfferProtoSerializer(proto_serializers.ModelProtoSerializer):
     class Meta:
         model = Offer
         proto_class = market_pb2.Offer
-        fields = ['ia_id']
+        fields = ['ia_id', 'comment']
