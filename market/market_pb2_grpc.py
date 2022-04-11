@@ -6,7 +6,11 @@ import market_pb2 as market__pb2
 
 
 class MarketControllerStub(object):
-    """Missing associated documentation comment in .proto file."""
+    """TODO(juagargi) the data types used allow easy integration with the ones from Django.
+    Despite this, we need to change them here to be more adequate. E.g. change
+    Offer.bw_profile from a string to a repeated int32
+
+    """
 
     def __init__(self, channel):
         """Constructor.
@@ -22,7 +26,11 @@ class MarketControllerStub(object):
 
 
 class MarketControllerServicer(object):
-    """Missing associated documentation comment in .proto file."""
+    """TODO(juagargi) the data types used allow easy integration with the ones from Django.
+    Despite this, we need to change them here to be more adequate. E.g. change
+    Offer.bw_profile from a string to a repeated int32
+
+    """
 
     def ListOffers(self, request, context):
         """Missing associated documentation comment in .proto file."""
@@ -46,7 +54,11 @@ def add_MarketControllerServicer_to_server(servicer, server):
 
  # This class is part of an EXPERIMENTAL API.
 class MarketController(object):
-    """Missing associated documentation comment in .proto file."""
+    """TODO(juagargi) the data types used allow easy integration with the ones from Django.
+    Despite this, we need to change them here to be more adequate. E.g. change
+    Offer.bw_profile from a string to a repeated int32
+
+    """
 
     @staticmethod
     def ListOffers(request,
