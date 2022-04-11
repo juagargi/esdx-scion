@@ -15,7 +15,12 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
+from market.services import MarketService
+import market.market_pb2_grpc
 
 urlpatterns = [
     path('admin/', admin.site.urls),
 ]
+
+def grpc_handlers(server):
+    market.market_pb2_grpc.add_MarketControllerServicer_to_server(MarketService.as_servicer(), server)

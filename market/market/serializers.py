@@ -1,10 +1,10 @@
-from models import Offer
+from market.models import Offer
 from django_grpc_framework import proto_serializers
-import market_pb2
+import market.market_pb2
 
 
-class UserProtoSerializer(proto_serializers.ModelProtoSerializer):
+class OfferProtoSerializer(proto_serializers.ModelProtoSerializer):
     class Meta:
         model = Offer
-        proto_class = market_pb2.Offer
+        proto_class = market.market_pb2.Offer
         fields = ['ia_id']
