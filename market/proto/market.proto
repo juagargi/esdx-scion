@@ -12,7 +12,7 @@ service MarketController {
 message ListRequest {}
 
 message Offer {
-    int64 IAID = 1; // ISD-AS ID
+    int64 iaid = 1; // ISD-AS ID
     string comment = 2;
     // Signature
     // Validity 

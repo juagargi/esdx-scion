@@ -15,7 +15,7 @@ _sym_db = _symbol_database.Default()
 from google.protobuf import empty_pb2 as google_dot_protobuf_dot_empty__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0cmarket.proto\x12\x06market\x1a\x1bgoogle/protobuf/empty.proto\"\r\n\x0bListRequest\"\x15\n\x05Offer\x12\x0c\n\x04IAID\x18\x01 \x01(\x03\x32\x46\n\x10MarketController\x12\x32\n\nListOffers\x12\x13.market.ListRequest\x1a\r.market.Offer\"\x00\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0cmarket.proto\x12\x06market\x1a\x1bgoogle/protobuf/empty.proto\"\r\n\x0bListRequest\"&\n\x05Offer\x12\x0c\n\x04iaid\x18\x01 \x01(\x03\x12\x0f\n\x07\x63omment\x18\x02 \x01(\t2F\n\x10MarketController\x12\x32\n\nListOffers\x12\x13.market.ListRequest\x1a\r.market.Offer\"\x00\x62\x06proto3')
 
 
 
@@ -42,7 +42,7 @@ if _descriptor._USE_C_DESCRIPTORS == False:
   _LISTREQUEST._serialized_start=53
   _LISTREQUEST._serialized_end=66
   _OFFER._serialized_start=68
-  _OFFER._serialized_end=89
-  _MARKETCONTROLLER._serialized_start=91
-  _MARKETCONTROLLER._serialized_end=161
+  _OFFER._serialized_end=106
+  _MARKETCONTROLLER._serialized_start=108
+  _MARKETCONTROLLER._serialized_end=178
 # @@protoc_insertion_point(module_scope)

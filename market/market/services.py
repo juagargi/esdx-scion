@@ -12,8 +12,9 @@ class MarketService(Service):
     # serializer_class = OfferProtoSerializer
     def ListOffers(self, request, context):
         offer = Offer()
-        offer.ia_id = 1111
+        offer.iaid = 1111
         offer.comment = 'deleteme comment'
         print(offer)
         serializer = OfferProtoSerializer(offer)
+        print(serializer.message)
         return serializer.message
