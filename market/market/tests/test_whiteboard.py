@@ -1,8 +1,11 @@
+from email import message
 from django.test import TestCase
 from django_grpc_framework.test import Channel
 import market_pb2, market_pb2_grpc
 from market.models import Offer, BW_PERIOD
 from django.utils import timezone as tz
+from market.serializers import OfferProtoSerializer
+from google.protobuf.timestamp_pb2 import Timestamp
 
 class TestWhiteboard(TestCase):
     def setUp(self):
@@ -49,3 +52,21 @@ class TestWhiteboard(TestCase):
                 expected = getattr(g, f.name)
                 got = getattr(g, f.name)
                 self.assertEqual(got, expected)
+
+    def test_add(self):
+        with Channel() as channel:
+            notbefore = tz.datetime.fromisoformat("2022-04-01T20:00:00.000000+00:00")
+            notafter = notbefore + tz.timedelta(seconds=4*BW_PERIOD)
+            o = market_pb2.Offer(
+                iaid=1,
+                iscore=True,
+                signature=b"",
+                notbefore=Timestamp(seconds=int(notbefore.timestamp())),
+                notafter=Timestamp(seconds=int(notafter.timestamp())),
+                reachable_paths="*",
+                qos_class=1,
+                price_per_nanounit=10,
+                bw_profile="2,2,2,2")
+            stub = market_pb2_grpc.MarketControllerStub(channel)
+            saved_offer = stub.AddOffer(o)
+            self.assertEqual(Offer.objects.all().count(), len(self.offers)+1)

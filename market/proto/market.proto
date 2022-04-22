@@ -12,6 +12,7 @@ import "google/protobuf/timestamp.proto";
 
 service MarketController {
     rpc ListOffers(ListRequest) returns (stream Offer) {}
+    rpc AddOffer(Offer) returns (Offer) {}
 }
 
 message ListRequest {}

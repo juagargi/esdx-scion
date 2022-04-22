@@ -14,3 +14,9 @@ class MarketService(Service):
         serializer = OfferProtoSerializer(offers, many=True)
         for offer in serializer.message:
             yield offer
+
+    def AddOffer(self, request, context):
+        serializer = OfferProtoSerializer(message=request)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return serializer.message
