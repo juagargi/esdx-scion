@@ -18,7 +18,7 @@ class MarketControllerStub(object):
         Args:
             channel: A grpc.Channel.
         """
-        self.ListOffers = channel.unary_unary(
+        self.ListOffers = channel.unary_stream(
                 '/market.MarketController/ListOffers',
                 request_serializer=market__pb2.ListRequest.SerializeToString,
                 response_deserializer=market__pb2.Offer.FromString,
@@ -41,7 +41,7 @@ class MarketControllerServicer(object):
 
 def add_MarketControllerServicer_to_server(servicer, server):
     rpc_method_handlers = {
-            'ListOffers': grpc.unary_unary_rpc_method_handler(
+            'ListOffers': grpc.unary_stream_rpc_method_handler(
                     servicer.ListOffers,
                     request_deserializer=market__pb2.ListRequest.FromString,
                     response_serializer=market__pb2.Offer.SerializeToString,
@@ -71,7 +71,7 @@ class MarketController(object):
             wait_for_ready=None,
             timeout=None,
             metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/market.MarketController/ListOffers',
+        return grpc.experimental.unary_stream(request, target, '/market.MarketController/ListOffers',
             market__pb2.ListRequest.SerializeToString,
             market__pb2.Offer.FromString,
             options, channel_credentials,

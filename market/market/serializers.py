@@ -18,7 +18,7 @@ class OfferProtoSerializer(proto_serializers.ModelProtoSerializer):
         model = Offer
         proto_class = market_pb2.Offer
         fields = ['iaid', 'iscore', 'signature', 'notbefore', 'notafter', 'reachable_paths',
-                  'qos_class', 'bw_profile', 'price_per_nanounit']
+                  'qos_class', 'price_per_nanounit', 'bw_profile']
 
 # class OfferProtoSerializer(proto_serializers.ProtoSerializer):
 #     class Meta:
