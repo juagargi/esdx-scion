@@ -18,13 +18,14 @@ service MarketController {
 message ListRequest {}
 
 message Offer {
-    int64 iaid = 1; // ISD-AS ID of the seller
-    bool iscore = 2;
-    bytes signature = 3;
-    google.protobuf.Timestamp notbefore  = 4;
-    google.protobuf.Timestamp notafter  = 5;
-    string reachable_paths = 6;
-    int32 qos_class = 7;
-    string bw_profile = 8;  // list of bw_units per period
-    int32 price_per_nanounit = 9;
+    int64 id = 1;  // the ID of this offer
+    int64 iaid = 2; // ISD-AS ID of the seller
+    bool iscore = 3;
+    bytes signature = 4;
+    google.protobuf.Timestamp notbefore  = 5;
+    google.protobuf.Timestamp notafter  = 6;
+    string reachable_paths = 7;
+    int32 qos_class = 8;
+    string bw_profile = 9;  // list of bw_units per period
+    int32 price_per_nanounit = 10;
 }

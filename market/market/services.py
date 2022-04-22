@@ -16,6 +16,7 @@ class MarketService(Service):
             yield offer
 
     def AddOffer(self, request, context):
+        request.id = 0 # force to empty
         serializer = OfferProtoSerializer(message=request)
         serializer.is_valid(raise_exception=True)
         serializer.save()
