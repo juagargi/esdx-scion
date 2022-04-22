@@ -38,19 +38,25 @@ class Offer(models.Model):
             raise ValueError("notafter must happen after notbefore")
         # check that the lifespan of the offer is a multiple of BW_PERIOD
         lifespan = self.notafter - self.notbefore
-        if lifespan.seconds % BW_PERIOD != 0:
+        if lifespan.total_seconds() % BW_PERIOD != 0:
             raise ValueError("the life span of the offer must be a multiple of BW_PERIOD "+
                              f"({BW_PERIOD} secs)")
         # check that there are enough values in the bw_profile
         profile = csv_to_intlist(self.bw_profile)
-        if len(profile) != lifespan.seconds // BW_PERIOD:
-            raise ValueError(f"bw_profile should contain exactly {lifespan.seconds // BW_PERIOD} values")
+        if len(profile) != lifespan.total_seconds() // BW_PERIOD:
+            raise ValueError(f"bw_profile should contain exactly "+
+                             f"{lifespan.total_seconds() // BW_PERIOD} values; contains {len(profile)}")
 
     def contains_profile(self, bw_profile: str, starting: datetime) -> bool:
-        if len(bw_profile) > len(self.bw_profile):
-            return False
-        this_prof = csv_to_intlist(self.bw_profile)
         that_prof = csv_to_intlist(bw_profile)
+        this_prof = csv_to_intlist(self.bw_profile)
+        offset = (starting - self.notbefore).total_seconds()
+        if offset % BW_PERIOD != 0 or offset < 0:
+            return False
+        offset = int(offset // BW_PERIOD)
+        this_prof = this_prof[offset:]
+        if len(that_prof) > len(this_prof):
+            return False
         for bw,other in zip(this_prof, that_prof):
             if other>bw:
                 return False
