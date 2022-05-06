@@ -1,4 +1,5 @@
 from email import message
+from nis import match
 from django.test import TestCase
 from django_grpc_framework.test import Channel
 import market_pb2, market_pb2_grpc
@@ -80,6 +81,9 @@ class TestWhiteboard(TestCase):
                 offer_id=matched_offer.id,
                 buyer_id=42,
                 signature=b"",
-                bw_profile="1",
+                bw_profile="2",
                 starting_on=Timestamp(seconds=int(starting_on.timestamp())))
             response = stub.Purchase(request)
+            self.assertEqual(Offer.objects.filter(id=matched_offer.id).count(), 0) # sold already
+            self.assertGreater(response.new_offer_id, 0)
+            # self.assertGreater(response.purchase_id, 0)

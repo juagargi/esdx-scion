@@ -1,10 +1,9 @@
-from market.models import Offer
-# from django_grpc_framework import generics
 from django_grpc_framework.services import Service
+from django.db import transaction
+from market.models import Offer
 from market.serializers import OfferProtoSerializer
-from django.utils import timezone as tz
 import market_pb2
-import pytz
+from util.conversion import time_from_pb_timestamp
 
 
 class MarketService(Service):
@@ -26,15 +25,21 @@ class MarketService(Service):
 
     def Purchase(self, request, context):
         response = market_pb2.PurchaseResponse()
-        offers = Offer.objects.filter(id=request.offer_id)
-        if len(offers) != 1:
-            response.message = f"offer id {request.offer_id} not found"
-            return response
-        starts_at = tz.datetime.fromtimestamp(request.starting_on.seconds + request.starting_on.nanos / 1e9)
-        starts_at = starts_at.replace(tzinfo=pytz.utc)
-        if not offers[0].contains_profile(request.bw_profile, starts_at):
-            response.message = "offer does not contain the requested BW profile"
-            return response
+        with transaction.atomic():
+            try:
+                offer = Offer.objects.get(id=request.offer_id)
+            except Offer.DoesNotExist:
+                response.message = f"offer id {request.offer_id} not found"
+                return response
+            starts_at = time_from_pb_timestamp(request.starting_on)
+            new_profile = offer.purchase(request.bw_profile, starts_at)
+            if new_profile is None:
+                response.message = "offer does not contain the requested BW profile"
+                return response
+            offer.bw_profile = new_profile
+            offer.delete()
+            offer.save()
 
         response.message = "success"
+        response.new_offer_id = offer.id
         return response
