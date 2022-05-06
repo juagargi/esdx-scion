@@ -1,6 +1,6 @@
 from django_grpc_framework.services import Service
 from django.db import transaction
-from market.models import Offer
+from market.models.offer import Offer
 from market.serializers import OfferProtoSerializer
 import market_pb2
 from util.conversion import time_from_pb_timestamp

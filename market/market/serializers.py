@@ -1,4 +1,4 @@
-from market.models import Offer
+from market.models.offer import Offer
 from django_grpc_framework import proto_serializers
 from rest_framework import serializers
 import market_pb2

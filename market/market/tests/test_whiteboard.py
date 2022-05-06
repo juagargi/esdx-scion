@@ -1,9 +1,8 @@
 from email import message
-from nis import match
 from django.test import TestCase
 from django_grpc_framework.test import Channel
 import market_pb2, market_pb2_grpc
-from market.models import Offer, BW_PERIOD
+from market.models.offer import Offer, BW_PERIOD
 from django.utils import timezone as tz
 from market.serializers import OfferProtoSerializer
 from google.protobuf.timestamp_pb2 import Timestamp
