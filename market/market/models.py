@@ -48,19 +48,34 @@ class Offer(models.Model):
                              f"{lifespan.total_seconds() // BW_PERIOD} values; contains {len(profile)}")
 
     def contains_profile(self, bw_profile: str, starting: datetime) -> bool:
+        return self.purchase(bw_profile, starting) != None
+
+    def purchase(self, bw_profile: str, starting: datetime) -> str:
+        """
+        returns a new bw profile or None if not possible to purchase
+        Cannot purchase negative bw, or total of zero bw, or before/after the profile
+        """
         that_prof = csv_to_intlist(bw_profile)
-        this_prof = csv_to_intlist(self.bw_profile)
+        orig_prof = csv_to_intlist(self.bw_profile)
         offset = (starting - self.notbefore).total_seconds()
         if offset % BW_PERIOD != 0 or offset < 0:
-            return False
+            return None
         offset = int(offset // BW_PERIOD)
-        this_prof = this_prof[offset:]
+        this_prof = orig_prof[offset:]
         if len(that_prof) > len(this_prof):
-            return False
-        for bw,other in zip(this_prof, that_prof):
-            if other>bw:
-                return False
-        return True
+            return None
+        new_prof = []
+        total_bought = 0
+        for bw, other in zip(this_prof, that_prof):
+            if other > bw or other < 0:
+                return None
+            new_prof.append(bw - other)
+            total_bought += other
+        if total_bought == 0:
+            return None
+        # save the new_prof chunk after the offset
+        orig_prof[offset:offset+len(new_prof)] = new_prof
+        return ",".join([str(i) for i in orig_prof])
 
 
 @receiver(pre_save, sender=Offer, dispatch_uid="offer_pre_save")

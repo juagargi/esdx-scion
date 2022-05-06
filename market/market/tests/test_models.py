@@ -1,3 +1,4 @@
+from tracemalloc import start
 from django.test import TestCase
 from market.models import Offer, BW_PERIOD
 from django.utils import timezone as tz
@@ -46,3 +47,46 @@ class TestOffer(TestCase):
         self.assertTrue(o.contains_profile("2,2", starting_at))
         # too much BW
         self.assertFalse(o.contains_profile("3,2", starting_at))
+
+    def test_purchase(self):
+        o = self._create_offer(6)  # 2,2,2,2,2,2
+        # buying -,-,1,2,2,1
+        starting_at = o.notbefore + tz.timedelta(seconds=2*BW_PERIOD)
+        new_profile = o.purchase("1,2,2,1", starting_at)
+        self.assertEqual(new_profile, "2,2,1,0,0,1")
+        # buying 2,1,2,0,0,0
+        o = self._create_offer(6)  # 2,2,2,2,2,2
+        starting_at = o.notbefore
+        new_profile = o.purchase("2,1,2", starting_at)
+        self.assertEqual(new_profile, "0,1,0,2,2,2")
+        # buying 3,2
+        o = self._create_offer(6)  # 2,2,2,2,2,2
+        starting_at = o.notbefore
+        new_profile = o.purchase("3,2", starting_at)
+        self.assertEqual(new_profile, None)
+        # buying 0,0,0
+        o = self._create_offer(6)  # 2,2,2,2,2,2
+        starting_at = o.notbefore
+        new_profile = o.purchase("0,0,0", starting_at)
+        self.assertEqual(new_profile, None)
+        # buying 2,-1
+        o = self._create_offer(6)  # 2,2,2,2,2,2
+        starting_at = o.notbefore
+        new_profile = o.purchase("2,-1", starting_at)
+        self.assertEqual(new_profile, None)
+        # we have now a shorter profile for sale 2,2,2
+        # buying 0,0,0,1
+        o = self._create_offer(3)  # 2,2,2
+        starting_at = o.notbefore
+        new_profile = o.purchase("0,0,0,1", starting_at)
+        self.assertEqual(new_profile, None)
+        # buying -,-,-,1
+        o = self._create_offer(3)  # 2,2,2
+        starting_at = o.notbefore + tz.timedelta(seconds=3*BW_PERIOD)
+        new_profile = o.purchase("1", starting_at)
+        self.assertEqual(new_profile, None)
+        # buying -,-,1,1
+        o = self._create_offer(3)  # 2,2,2
+        starting_at = o.notbefore + tz.timedelta(seconds=2*BW_PERIOD)
+        new_profile = o.purchase("1,1", starting_at)
+        self.assertEqual(new_profile, None)

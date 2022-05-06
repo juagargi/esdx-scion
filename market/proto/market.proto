@@ -13,6 +13,7 @@ import "google/protobuf/timestamp.proto";
 service MarketController {
     rpc ListOffers(ListRequest) returns (stream Offer) {}
     rpc AddOffer(Offer) returns (Offer) {}
+    rpc Purchase(PurchaseRequest) returns (PurchaseResponse) {}
 }
 
 message ListRequest {}
@@ -22,10 +23,24 @@ message Offer {
     int64 iaid = 2; // ISD-AS ID of the seller
     bool iscore = 3;
     bytes signature = 4;
-    google.protobuf.Timestamp notbefore  = 5;
-    google.protobuf.Timestamp notafter  = 6;
+    google.protobuf.Timestamp notbefore = 5;
+    google.protobuf.Timestamp notafter = 6;
     string reachable_paths = 7;
     int32 qos_class = 8;
     string bw_profile = 9;  // list of bw_units per period
     int32 price_per_nanounit = 10;
+}
+
+message PurchaseRequest {
+    int64 offer_id = 1;
+    int64 buyer_id = 2; // ISD-AS ID of the buyer
+    bytes signature = 3;
+    string bw_profile = 4;
+    google.protobuf.Timestamp starting_on = 5;
+}
+
+message PurchaseResponse {
+    int64 purchase_id = 1; // or zero if failed
+    int64 new_offer_id = 2;  // non zero if the purchase created a new Offer (splitting its BW profile)
+    string message = 3;
 }

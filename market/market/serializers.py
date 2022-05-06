@@ -20,6 +20,7 @@ class OfferProtoSerializer(proto_serializers.ModelProtoSerializer):
         fields = ['id', 'iaid', 'iscore', 'signature', 'notbefore', 'notafter', 'reachable_paths',
                   'qos_class', 'price_per_nanounit', 'bw_profile']
 
+
 # class OfferProtoSerializer(proto_serializers.ProtoSerializer):
 #     class Meta:
 #         model = Offer

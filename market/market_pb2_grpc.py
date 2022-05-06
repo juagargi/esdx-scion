@@ -28,6 +28,11 @@ class MarketControllerStub(object):
                 request_serializer=market__pb2.Offer.SerializeToString,
                 response_deserializer=market__pb2.Offer.FromString,
                 )
+        self.Purchase = channel.unary_unary(
+                '/market.MarketController/Purchase',
+                request_serializer=market__pb2.PurchaseRequest.SerializeToString,
+                response_deserializer=market__pb2.PurchaseResponse.FromString,
+                )
 
 
 class MarketControllerServicer(object):
@@ -49,6 +54,12 @@ class MarketControllerServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def Purchase(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_MarketControllerServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -61,6 +72,11 @@ def add_MarketControllerServicer_to_server(servicer, server):
                     servicer.AddOffer,
                     request_deserializer=market__pb2.Offer.FromString,
                     response_serializer=market__pb2.Offer.SerializeToString,
+            ),
+            'Purchase': grpc.unary_unary_rpc_method_handler(
+                    servicer.Purchase,
+                    request_deserializer=market__pb2.PurchaseRequest.FromString,
+                    response_serializer=market__pb2.PurchaseResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -107,5 +123,22 @@ class MarketController(object):
         return grpc.experimental.unary_unary(request, target, '/market.MarketController/AddOffer',
             market__pb2.Offer.SerializeToString,
             market__pb2.Offer.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def Purchase(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/market.MarketController/Purchase',
+            market__pb2.PurchaseRequest.SerializeToString,
+            market__pb2.PurchaseResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)

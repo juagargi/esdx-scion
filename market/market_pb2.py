@@ -15,12 +15,14 @@ _sym_db = _symbol_database.Default()
 from google.protobuf import timestamp_pb2 as google_dot_protobuf_dot_timestamp__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0cmarket.proto\x12\x06market\x1a\x1fgoogle/protobuf/timestamp.proto\"\r\n\x0bListRequest\"\xfd\x01\n\x05Offer\x12\n\n\x02id\x18\x01 \x01(\x03\x12\x0c\n\x04iaid\x18\x02 \x01(\x03\x12\x0e\n\x06iscore\x18\x03 \x01(\x08\x12\x11\n\tsignature\x18\x04 \x01(\x0c\x12-\n\tnotbefore\x18\x05 \x01(\x0b\x32\x1a.google.protobuf.Timestamp\x12,\n\x08notafter\x18\x06 \x01(\x0b\x32\x1a.google.protobuf.Timestamp\x12\x17\n\x0freachable_paths\x18\x07 \x01(\t\x12\x11\n\tqos_class\x18\x08 \x01(\x05\x12\x12\n\nbw_profile\x18\t \x01(\t\x12\x1a\n\x12price_per_nanounit\x18\n \x01(\x05\x32t\n\x10MarketController\x12\x34\n\nListOffers\x12\x13.market.ListRequest\x1a\r.market.Offer\"\x00\x30\x01\x12*\n\x08\x41\x64\x64Offer\x12\r.market.Offer\x1a\r.market.Offer\"\x00\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0cmarket.proto\x12\x06market\x1a\x1fgoogle/protobuf/timestamp.proto\"\r\n\x0bListRequest\"\xfd\x01\n\x05Offer\x12\n\n\x02id\x18\x01 \x01(\x03\x12\x0c\n\x04iaid\x18\x02 \x01(\x03\x12\x0e\n\x06iscore\x18\x03 \x01(\x08\x12\x11\n\tsignature\x18\x04 \x01(\x0c\x12-\n\tnotbefore\x18\x05 \x01(\x0b\x32\x1a.google.protobuf.Timestamp\x12,\n\x08notafter\x18\x06 \x01(\x0b\x32\x1a.google.protobuf.Timestamp\x12\x17\n\x0freachable_paths\x18\x07 \x01(\t\x12\x11\n\tqos_class\x18\x08 \x01(\x05\x12\x12\n\nbw_profile\x18\t \x01(\t\x12\x1a\n\x12price_per_nanounit\x18\n \x01(\x05\"\x8d\x01\n\x0fPurchaseRequest\x12\x10\n\x08offer_id\x18\x01 \x01(\x03\x12\x10\n\x08\x62uyer_id\x18\x02 \x01(\x03\x12\x11\n\tsignature\x18\x03 \x01(\x0c\x12\x12\n\nbw_profile\x18\x04 \x01(\t\x12/\n\x0bstarting_on\x18\x05 \x01(\x0b\x32\x1a.google.protobuf.Timestamp\"N\n\x10PurchaseResponse\x12\x13\n\x0bpurchase_id\x18\x01 \x01(\x03\x12\x14\n\x0cnew_offer_id\x18\x02 \x01(\x03\x12\x0f\n\x07message\x18\x03 \x01(\t2\xb5\x01\n\x10MarketController\x12\x34\n\nListOffers\x12\x13.market.ListRequest\x1a\r.market.Offer\"\x00\x30\x01\x12*\n\x08\x41\x64\x64Offer\x12\r.market.Offer\x1a\r.market.Offer\"\x00\x12?\n\x08Purchase\x12\x17.market.PurchaseRequest\x1a\x18.market.PurchaseResponse\"\x00\x62\x06proto3')
 
 
 
 _LISTREQUEST = DESCRIPTOR.message_types_by_name['ListRequest']
 _OFFER = DESCRIPTOR.message_types_by_name['Offer']
+_PURCHASEREQUEST = DESCRIPTOR.message_types_by_name['PurchaseRequest']
+_PURCHASERESPONSE = DESCRIPTOR.message_types_by_name['PurchaseResponse']
 ListRequest = _reflection.GeneratedProtocolMessageType('ListRequest', (_message.Message,), {
   'DESCRIPTOR' : _LISTREQUEST,
   '__module__' : 'market_pb2'
@@ -35,6 +37,20 @@ Offer = _reflection.GeneratedProtocolMessageType('Offer', (_message.Message,), {
   })
 _sym_db.RegisterMessage(Offer)
 
+PurchaseRequest = _reflection.GeneratedProtocolMessageType('PurchaseRequest', (_message.Message,), {
+  'DESCRIPTOR' : _PURCHASEREQUEST,
+  '__module__' : 'market_pb2'
+  # @@protoc_insertion_point(class_scope:market.PurchaseRequest)
+  })
+_sym_db.RegisterMessage(PurchaseRequest)
+
+PurchaseResponse = _reflection.GeneratedProtocolMessageType('PurchaseResponse', (_message.Message,), {
+  'DESCRIPTOR' : _PURCHASERESPONSE,
+  '__module__' : 'market_pb2'
+  # @@protoc_insertion_point(class_scope:market.PurchaseResponse)
+  })
+_sym_db.RegisterMessage(PurchaseResponse)
+
 _MARKETCONTROLLER = DESCRIPTOR.services_by_name['MarketController']
 if _descriptor._USE_C_DESCRIPTORS == False:
 
@@ -43,6 +59,10 @@ if _descriptor._USE_C_DESCRIPTORS == False:
   _LISTREQUEST._serialized_end=70
   _OFFER._serialized_start=73
   _OFFER._serialized_end=326
-  _MARKETCONTROLLER._serialized_start=328
-  _MARKETCONTROLLER._serialized_end=444
+  _PURCHASEREQUEST._serialized_start=329
+  _PURCHASEREQUEST._serialized_end=470
+  _PURCHASERESPONSE._serialized_start=472
+  _PURCHASERESPONSE._serialized_end=550
+  _MARKETCONTROLLER._serialized_start=553
+  _MARKETCONTROLLER._serialized_end=734
 # @@protoc_insertion_point(module_scope)

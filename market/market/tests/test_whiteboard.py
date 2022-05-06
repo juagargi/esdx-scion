@@ -70,3 +70,16 @@ class TestWhiteboard(TestCase):
             stub = market_pb2_grpc.MarketControllerStub(channel)
             saved_offer = stub.AddOffer(o)
             self.assertEqual(Offer.objects.all().count(), len(self.offers)+1)
+
+    def test_purchase(self):
+        with Channel() as channel:
+            matched_offer = self.offers[1]
+            starting_on = matched_offer.notbefore
+            request = market_pb2.PurchaseRequest(
+                offer_id=matched_offer.id,
+                buyer_id=42,
+                signature=b"",
+                bw_profile="1",
+                starting_on=Timestamp(seconds=int(starting_on.timestamp())))
+            stub = market_pb2_grpc.MarketControllerStub(channel)
+            response = stub.Purchase(request)
