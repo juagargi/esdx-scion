@@ -55,6 +55,7 @@ class TestWhiteboard(TestCase):
 
     def test_add(self):
         with Channel() as channel:
+            stub = market_pb2_grpc.MarketControllerStub(channel)
             notbefore = tz.datetime.fromisoformat("2022-04-01T20:00:00.000000+00:00")
             notafter = notbefore + tz.timedelta(seconds=4*BW_PERIOD)
             o = market_pb2.Offer(
@@ -67,12 +68,12 @@ class TestWhiteboard(TestCase):
                 qos_class=1,
                 price_per_nanounit=10,
                 bw_profile="2,2,2,2")
-            stub = market_pb2_grpc.MarketControllerStub(channel)
             saved_offer = stub.AddOffer(o)
             self.assertEqual(Offer.objects.all().count(), len(self.offers)+1)
 
     def test_purchase(self):
         with Channel() as channel:
+            stub = market_pb2_grpc.MarketControllerStub(channel)
             matched_offer = self.offers[1]
             starting_on = matched_offer.notbefore
             request = market_pb2.PurchaseRequest(
@@ -81,5 +82,4 @@ class TestWhiteboard(TestCase):
                 signature=b"",
                 bw_profile="1",
                 starting_on=Timestamp(seconds=int(starting_on.timestamp())))
-            stub = market_pb2_grpc.MarketControllerStub(channel)
             response = stub.Purchase(request)
