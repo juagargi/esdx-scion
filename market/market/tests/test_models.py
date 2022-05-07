@@ -1,6 +1,8 @@
 from tracemalloc import start
 from django.test import TestCase
 from market.models.offer import Offer, BW_PERIOD
+from market.models.purchase import PurchaseOrder
+from market.models.contract import Contract
 from django.utils import timezone as tz
 
 

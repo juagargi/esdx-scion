@@ -3,9 +3,12 @@ from django.test import TestCase
 from django_grpc_framework.test import Channel
 import market_pb2, market_pb2_grpc
 from market.models.offer import Offer, BW_PERIOD
+from market.models.purchase import PurchaseOrder
+from market.models.contract import Contract
 from django.utils import timezone as tz
 from market.serializers import OfferProtoSerializer
 from google.protobuf.timestamp_pb2 import Timestamp
+from django.utils.timezone import is_naive
 
 class TestWhiteboard(TestCase):
     def setUp(self):
@@ -83,6 +86,12 @@ class TestWhiteboard(TestCase):
                 bw_profile="2",
                 starting_on=Timestamp(seconds=int(starting_on.timestamp())))
             response = stub.Purchase(request)
-            self.assertEqual(Offer.objects.filter(id=matched_offer.id).count(), 0) # sold already
             self.assertGreater(response.new_offer_id, 0)
-            # self.assertGreater(response.purchase_id, 0)
+            self.assertGreater(response.purchase_id, 0)
+            self.assertEqual(Offer.objects.available(id=matched_offer.id).count(), 0) # sold already
+            order = PurchaseOrder.objects.get(id=response.purchase_id)
+            self.assertEqual(order.buyer_id, 42)
+            self.assertEqual(order.bw_profile, "2")
+
+            contract = order.contract
+            self.assertAlmostEqual(contract.timestamp, tz.localtime(), delta=tz.timedelta(seconds=1))

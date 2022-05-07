@@ -14,9 +14,15 @@ BW_UNIT = 1000000000  # 1 Gbps
 BW_PERIOD = 600  # 600 seconds = 10 minutes
 
 
+class OfferManager(models.Manager):
+    def available(self, *args, **kwargs):
+        return self.filter(purchase_order=None, *args, **kwargs)
+
 class Offer(models.Model):
     class Meta:
         verbose_name = "Bandwidth Offer by AS"
+
+    objects = OfferManager()
 
     iaid = models.BigIntegerField()
     iscore = models.BooleanField()
@@ -47,6 +53,9 @@ class Offer(models.Model):
         if len(profile) != lifespan.total_seconds() // BW_PERIOD:
             raise ValueError(f"bw_profile should contain exactly "+
                              f"{lifespan.total_seconds() // BW_PERIOD} values; contains {len(profile)}")
+
+    def validate_signature(self):
+        return True  # TODO(juagargi) do it
 
     def contains_profile(self, bw_profile: str, starting: datetime) -> bool:
         return self.purchase(bw_profile, starting) != None
