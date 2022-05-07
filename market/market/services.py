@@ -62,6 +62,6 @@ class MarketService(Service):
             offer.save()
 
         response.message = "success"
-        response.purchase_id = purchase_order.id
+        response.contract_id = contract.id
         response.new_offer_id = offer.id
         return response

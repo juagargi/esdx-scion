@@ -18,6 +18,15 @@ class OfferManager(models.Manager):
     def available(self, *args, **kwargs):
         return self.filter(purchase_order=None, *args, **kwargs)
 
+    def get_available(self, *args, **kwargs):
+        l = self.available(*args, **kwargs)
+        if len(l) == 0:
+            raise Offer.DoesNotExist()
+        elif len(l) > 1:
+            raise Offer.MultipleObjectsReturned()
+        else:
+            return l[0]
+
 class Offer(models.Model):
     class Meta:
         verbose_name = "Bandwidth Offer by AS"
@@ -28,7 +37,7 @@ class Offer(models.Model):
     iscore = models.BooleanField()
     signature = models.BinaryField()
     notbefore = models.DateTimeField()
-    notafter = models.DateTimeField()
+    notafter = models.DateTimeField()  # the difference notafter - notbefore is len(bw_profile)
     # this will be a '\n' separated list of comma separated lists of ISD-AS#IF,IF sequences
     reachable_paths = models.TextField()
     qos_class = models.IntegerField()  # TRD

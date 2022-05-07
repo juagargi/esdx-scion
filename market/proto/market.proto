@@ -40,7 +40,7 @@ message PurchaseRequest {
 }
 
 message PurchaseResponse {
-    int64 purchase_id = 1; // or zero if failed
+    int64 contract_id = 1; // or zero if failed
     int64 new_offer_id = 2;  // non zero if the purchase created a new Offer (splitting its BW profile)
     string message = 3;
 }

@@ -87,11 +87,17 @@ class TestWhiteboard(TestCase):
                 starting_on=Timestamp(seconds=int(starting_on.timestamp())))
             response = stub.Purchase(request)
             self.assertGreater(response.new_offer_id, 0)
-            self.assertGreater(response.purchase_id, 0)
+            self.assertGreater(response.contract_id, 0)
             self.assertEqual(Offer.objects.available(id=matched_offer.id).count(), 0) # sold already
-            order = PurchaseOrder.objects.get(id=response.purchase_id)
+            # new offer:
+            newoffer = Offer.objects.get_available(id=response.new_offer_id)
+            self.assertEqual(newoffer.bw_profile, "0,2,2,2")
+            self.assertEqual(newoffer.notbefore, matched_offer.notbefore)
+            self.assertEqual(newoffer.notafter, matched_offer.notafter)
+
+            # contract and purchase order:
+            contract = Contract.objects.get(id=response.contract_id)
+            self.assertAlmostEqual(contract.timestamp, tz.localtime(), delta=tz.timedelta(seconds=1))
+            order = contract.purchase_order
             self.assertEqual(order.buyer_id, 42)
             self.assertEqual(order.bw_profile, "2")
-
-            contract = order.contract
-            self.assertAlmostEqual(contract.timestamp, tz.localtime(), delta=tz.timedelta(seconds=1))
