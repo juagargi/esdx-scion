@@ -2,7 +2,7 @@
 from django.db import models
 from django.core import validators
 from django.utils.timezone import is_naive
-from django.db.models.signals import pre_save
+from django.db.models.signals import pre_save, pre_delete
 from django.dispatch import receiver
 from defs import BW_PERIOD, BW_UNIT
 
@@ -102,3 +102,12 @@ class Offer(models.Model):
 def _offer_pre_save(sender, instance, **kwargs):
     """ signal for pre_save validates instance before saving it """
     instance._pre_save()
+
+@receiver(pre_delete, sender=Offer, dispatch_uid="offer_pre_delete")
+def _offer_pre_delete(sender, instance, **kwargs):
+    """
+    Signal for pre_delete always raises an exception
+    The reason is that offers are never deleted, as they are needed to verify
+    existing or past contracts.
+    """
+    raise RuntimeError("logic error: pre_delete: not allowed to delete any Offer object")
