@@ -58,12 +58,13 @@ def ia_str_to_int(ia: str) -> int:
     return (isd << 48) | as_value
 
 
+def _ia_validator(ia: str):
+    try:
+        ia_str_to_int(ia)
+    except ValueError as ex:
+        raise ValidationError(f"not a valid IA value: {str(ex)}")
+
+
 def ia_validator():
     """ returns a validator that validates IA of the form 1-ff00:0:111 """
-    def _ia_validator(ia: str):
-        try:
-            ia_str_to_int(ia)
-        except ValueError as ex:
-            raise ValidationError(f"not a valid IA value: {str(ex)}")
-
     return _ia_validator
