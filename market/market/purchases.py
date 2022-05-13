@@ -1,7 +1,7 @@
 from datetime import datetime
 from django.db import transaction
 from market.models.offer import Offer
-from market.models.purchase import PurchaseOrder
+from market.models.purchase_order import PurchaseOrder
 from market.models.contract import Contract
 
 

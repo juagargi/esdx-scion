@@ -6,7 +6,7 @@ from django.dispatch import receiver
 
 from util.conversion import csv_to_intlist
 
-from market.models.purchase import PurchaseOrder
+from market.models.purchase_order import PurchaseOrder
 
 
 class Contract(models.Model):

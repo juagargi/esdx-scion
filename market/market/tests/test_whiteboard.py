@@ -3,7 +3,7 @@ from django.test import TestCase
 from django_grpc_framework.test import Channel
 import market_pb2, market_pb2_grpc
 from market.models.offer import Offer, BW_PERIOD
-from market.models.purchase import PurchaseOrder
+from market.models.purchase_order import PurchaseOrder
 from market.models.contract import Contract
 from django.utils import timezone as tz
 from market.serializers import OfferProtoSerializer
