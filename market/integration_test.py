@@ -102,6 +102,7 @@ def main():
         django.wait(timeout=1)
     except:
         django.kill()
+    print("ok")
     return 0
 
 
