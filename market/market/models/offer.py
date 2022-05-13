@@ -1,4 +1,3 @@
-# from multiprocessing.sharedctypes import Value
 from django.db import models
 from django.core import validators
 from django.utils.timezone import is_naive
@@ -8,11 +7,6 @@ from defs import BW_PERIOD, BW_UNIT
 
 from util.conversion import csv_to_intlist
 from datetime import datetime
-
-
-# # define constants
-# BW_UNIT = 1000000000  # 1 Gbps
-# BW_PERIOD = 600  # 600 seconds = 10 minutes
 
 
 class OfferManager(models.Manager):
