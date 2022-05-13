@@ -18,8 +18,6 @@ class PurchaseOrder(models.Model):
     class Meta:
         verbose_name = "Signed Purchase Order"
 
-    # offer_id = models.BigIntegerField() # TODO(juagargi) make this a foreign key
-
     offer = models.OneToOneField(
         Offer,
         related_name='purchase_order',

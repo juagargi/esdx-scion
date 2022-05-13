@@ -14,6 +14,7 @@ service MarketController {
     rpc ListOffers(ListRequest) returns (stream Offer) {}
     rpc AddOffer(Offer) returns (Offer) {}
     rpc Purchase(PurchaseRequest) returns (PurchaseResponse) {}
+    rpc GetContract(GetContractRequest) returns (Contract) {}
 }
 
 message ListRequest {}
@@ -43,4 +44,32 @@ message PurchaseResponse {
     int64 contract_id = 1; // or zero if failed
     int64 new_offer_id = 2;  // non zero if the purchase created a new Offer (splitting its BW profile)
     string message = 3;
+}
+
+message GetContractRequest {
+    int64 contract_id = 1;
+    int64 requester_id = 2;
+    bytes requester_signature = 3;
+}
+
+message Contract {
+    int64 contract_id = 1;
+    google.protobuf.Timestamp contract_timestamp = 2;
+    // the signature from the broker (IXP) covers all fields
+    bytes contract_signature = 3;
+    // details about the offer:
+    int64 offer_seller_ia = 10;
+    bool offer_seller_is_core = 11;
+    google.protobuf.Timestamp offer_notbefore = 12;
+    google.protobuf.Timestamp offer_notafter = 13;
+    string offer_reachable_paths = 14;
+    int32 offer_qos_class = 15;
+    int64 offer_price_per_nanounit = 16;
+    string offer_bw_profile = 17;
+    bytes offer_signature = 18;
+    // details about the buyer
+    int64 buyer_ia = 50;
+    google.protobuf.Timestamp buyer_starting_on = 51;
+    string buyer_bw_profile = 52;
+    bytes buyer_signature = 53;
 }
