@@ -1,7 +1,8 @@
 Django>=3
+cryptography
 django
-djangorestframework
 djangogrpcframework>=0.2.1
+djangorestframework
 grpcio
 grpcio-tools
 pip-tools
