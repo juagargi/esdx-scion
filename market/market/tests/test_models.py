@@ -1,9 +1,15 @@
 from tracemalloc import start
 from django.test import TestCase
+from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.hazmat.primitives import serialization
 from market.models.offer import Offer, BW_PERIOD
 from market.models.purchase_order import PurchaseOrder
 from market.models.contract import Contract
+from market.models.ases import AS
 from django.utils import timezone as tz
+from util import crypto
+
+import datetime
 
 
 class TestOffer(TestCase):
@@ -92,3 +98,36 @@ class TestOffer(TestCase):
         starting_at = o.notbefore + tz.timedelta(seconds=2*BW_PERIOD)
         new_profile = o.purchase("1,1", starting_at)
         self.assertEqual(new_profile, None)
+
+
+class TestAS(TestCase):
+    def test_as_creation(self):
+        # TODO(juagargi)
+        # create a key
+        key = rsa.generate_private_key(
+            public_exponent=65537,
+            key_size=2048,
+        )
+        # create a self-signed cert
+        issuer = subject = crypto.create_x509_name("CH", "Netsec", "ETH", "1-ff00:0:111")
+        cert = crypto.create_certificate(
+            issuer,
+            subject,
+            key,
+            datetime.datetime.utcnow(),
+            datetime.datetime.utcnow() + datetime.timedelta(days=1),
+        )
+        thisas = AS.objects.create(
+            iaid="1-ff00:0:111",
+            cert=cert,
+        )
+        self.assertEqual(
+            crypto.certificate_to_pem(cert),
+            thisas.certificate_pem,
+        )
+        self.assertRaises(
+            ValueError,
+            AS.objects.create,
+            iaid="1-ff00:0:112", # the IA is different
+            cert=cert,
+        )

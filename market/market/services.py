@@ -1,6 +1,8 @@
 from django_grpc_framework.services import Service
 from django.db import transaction
 from market.models.offer import Offer
+from market.models.ases import AS
+from market.models.broker import Broker
 from market.serializers import OfferProtoSerializer
 import market_pb2
 from util.conversion import time_from_pb_timestamp
@@ -18,7 +20,7 @@ class MarketService(Service):
             yield offer
 
     def AddOffer(self, request, context):
-        request.id = 0 # force to empty
+        request.id = 0 # force to zero because we will get an id from the DB
         serializer = OfferProtoSerializer(message=request)
         serializer.is_valid(raise_exception=True)
         serializer.save()
