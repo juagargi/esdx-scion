@@ -23,7 +23,7 @@ message Offer {
     int64 id = 1;  // the ID of this offer
     string iaid = 2; // ISD-AS ID of the seller
     bool iscore = 3;
-    bytes signature = 4;
+    string signature = 4; // base64 encoded
     google.protobuf.Timestamp notbefore = 5;
     google.protobuf.Timestamp notafter = 6;
     string reachable_paths = 7;
@@ -35,7 +35,7 @@ message Offer {
 message PurchaseRequest {
     int64 offer_id = 1;
     string buyer_iaid = 2; // ISD-AS ID of the buyer
-    bytes signature = 3;
+    string signature = 3; // base64 encoded
     string bw_profile = 4;
     google.protobuf.Timestamp starting_on = 5;
 }

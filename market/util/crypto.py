@@ -116,7 +116,7 @@ def signature_create(key: rsa.RSAPrivateKey, data: bytes) -> str:
         hashes.SHA256()
     )
     # encode it in base64
-    return base64.standard_b64encode(s)
+    return base64.standard_b64encode(s).decode("ascii")
 
 
 def signature_validate(cert: x509.Certificate, signature: str, data: bytes) -> None:

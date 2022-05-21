@@ -87,6 +87,11 @@ class TestWhiteboard(TestCase):
                 bw_profile="2",
                 starting_on=Timestamp(seconds=int(starting_on.timestamp())))
             response = stub.Purchase(request)
+            return
+
+
+
+
             self.assertGreater(response.new_offer_id, 0, response.message)
             self.assertGreater(response.contract_id, 0, response.message)
             self.assertEqual(Offer.objects.available(id=matched_offer.id).count(), 0) # sold already

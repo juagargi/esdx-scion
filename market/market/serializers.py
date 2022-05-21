@@ -24,7 +24,7 @@ class OfferProtoSerializer(proto_serializers.ProtoSerializer):
 
     iaid = serializers.CharField(max_length=32)
     iscore = serializers.BooleanField()
-    signature = BinaryField()
+    signature = serializers.CharField(max_length=1024)
     notbefore = serializers.DateTimeField()
     notafter = serializers.DateTimeField()
     reachable_paths = serializers.CharField()

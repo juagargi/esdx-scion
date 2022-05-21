@@ -79,7 +79,7 @@ class TestSignatures(TestCase):
         crypto.signature_validate(cert, signature, data)
         # modify signature and validate signature
         self.assertNotEqual(signature[0], b'1') # if equal, change the b'1' to something else below
-        bad_signature = b'1' + signature[1:]
+        bad_signature = '1' + signature[1:]
         self.assertRaises(
             ValueError,
             crypto.signature_validate,
