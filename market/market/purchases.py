@@ -5,7 +5,7 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 from market.models.offer import Offer
 from market.models.ases import AS
 from market.models.purchase_order import PurchaseOrder, fields_serialize_to_bytes
-from market.models.contract import Contract
+from market.models.contract import Contract, fields_serialize_to_bytes as contract_serialize
 from util import crypto
 
 
@@ -34,10 +34,11 @@ def purchase_offer(offer: Offer,
             starting_on=buyer_starting_on)        
 
         # create contract
-        contract = Contract.objects.create(
+        contract = Contract(
             purchase_order=purchase_order,
-            signature_broker=b"",  # TODO(juagargi) implement signing the contract
         )
+        contract.stamp_signature()
+        contract.save()
         # create new offer
         offer.id = None
         offer.bw_profile = new_profile
@@ -56,5 +57,4 @@ def sign_purchase_order(
         bw_profile,
         int(starting_on.timestamp())
     )
-    print(f"deleteme data: {data}")
     return crypto.signature_create(buyer_key, data)

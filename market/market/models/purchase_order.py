@@ -57,13 +57,13 @@ def _purchaseorder_pre_save(sender, instance, **kwargs):
 
 
 def fields_serialize_to_bytes(
-    offer: bytes,
+    offer_bytes: bytes,
     bw_profile: str,
     starting_on: int) -> bytes:
     """
     Fields:
-    offer: serialized to bytes offer
+    offer: offer serialized to bytes, without signature
     starting_on: in seconds from UTC epoch
     """
-    return b"offer:" + offer + b"bw_profile:" + bw_profile.encode("ascii") + \
+    return b"offer:" + offer_bytes + b"bw_profile:" + bw_profile.encode("ascii") + \
         b"starting_on:" + str(starting_on).encode("ascii")

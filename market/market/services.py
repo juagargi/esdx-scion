@@ -45,7 +45,7 @@ class MarketService(Service):
                                                  starts_at,
                                                  request.bw_profile,
                                                  request.signature)
-            except Exception as ex:
+            except ValueError as ex:
                 response.message = str(ex)
                 return response
 
