@@ -41,7 +41,7 @@ class MarketService(Service):
 
             try:
                 contract, offer = purchase_offer(offer,
-                                                 request.buyer_id,
+                                                 request.buyer_iaid,
                                                  starts_at,
                                                  request.bw_profile,
                                                  request.signature)

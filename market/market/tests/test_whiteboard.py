@@ -82,7 +82,7 @@ class TestWhiteboard(TestCase):
             starting_on = matched_offer.notbefore
             request = market_pb2.PurchaseRequest(
                 offer_id=matched_offer.id,
-                buyer_id=42,
+                buyer_iaid="1-ff00:0:112",
                 signature=b"1",
                 bw_profile="2",
                 starting_on=Timestamp(seconds=int(starting_on.timestamp())))
@@ -100,5 +100,5 @@ class TestWhiteboard(TestCase):
             contract = Contract.objects.get(id=response.contract_id)
             self.assertAlmostEqual(contract.timestamp, tz.localtime(), delta=tz.timedelta(seconds=1))
             order = contract.purchase_order
-            self.assertEqual(order.buyer_id, 42)
+            self.assertEqual(order.buyer.iaid, "1-ff00:0:112")
             self.assertEqual(order.bw_profile, "2")
