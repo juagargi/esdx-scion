@@ -17,6 +17,11 @@ class BrokerManager(models.Manager):
             raise RuntimeError("only one broker allowed (creating one but one already exists)")
         return super().create(*args, **kwargs)
 
+    def get(self, **kwargs):
+        if super().all().count() > 0:
+            raise RuntimeError("only one broker allowed (creating one but one already exists)")
+        return super().get(**kwargs)
+
 
 class Broker(models.Model):
     class Meta:

@@ -4,9 +4,11 @@ from django.utils.timezone import is_naive
 from django.db.models.signals import pre_save, pre_delete
 from django.dispatch import receiver
 from defs import BW_PERIOD, BW_UNIT
-
-from util.conversion import csv_to_intlist, ia_validator
 from datetime import datetime
+
+from market.models.broker import Broker
+from util.conversion import csv_to_intlist, ia_validator
+from util import crypto
 
 
 class OfferManager(models.Manager):
@@ -33,7 +35,7 @@ class Offer(models.Model):
                             verbose_name="The IA id like 1-ff00:1:1",
                             validators=[ia_validator()])
     iscore = models.BooleanField()
-    signature = models.TextField()  # in the DB, this is signed by the IXP
+    signature = models.BinaryField()  # in the DB, this is signed by the IXP
     notbefore = models.DateTimeField()
     notafter = models.DateTimeField()  # the difference notafter - notbefore is len(bw_profile)
     # this will be a '\n' separated list of comma separated lists of ISD-AS#IF,IF sequences
@@ -61,8 +63,25 @@ class Offer(models.Model):
             raise ValueError(f"bw_profile should contain exactly "+
                              f"{lifespan.total_seconds() // BW_PERIOD} values; contains {len(profile)}")
 
+    def serialize_to_bytes(self):
+        return fields_serialize_to_bytes(
+            self.iaid,
+            self.iscore,
+            int(self.notbefore.timestamp()),
+            int(self.notafter.timestamp()),
+            self.reachable_paths,
+            self.qos_class,
+            self.price_per_nanounit,
+            self.bw_profile
+        )
+
     def validate_signature(self):
-        return True  # TODO(juagargi) do it
+        # serialize to bytes
+        data = self.serialize_to_bytes()
+        # get broker's certificate
+        cert = crypto.load_certificate(Broker.objects.get().certificate_pem)
+        # validate signature
+        crypto.signature_validate(cert, self.signature, data)
 
     def contains_profile(self, bw_profile: str, starting: datetime) -> bool:
         return self.purchase(bw_profile, starting) != None

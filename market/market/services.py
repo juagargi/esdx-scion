@@ -21,10 +21,13 @@ class MarketService(Service):
 
     def AddOffer(self, request, context):
         request.id = 0 # force to zero because we will get an id from the DB
-        serializer = OfferProtoSerializer(message=request)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return serializer.message
+        grpc_offer = OfferProtoSerializer(message=request)
+        grpc_offer.is_valid(raise_exception=True)
+        grpc_offer.validate_signature_from_seller()
+        grpc_offer.sign_with_broker()
+        saved = grpc_offer.save()
+        grpc_offer.message.id = saved.id
+        return grpc_offer.message
 
     def Purchase(self, request, context):
         response = market_pb2.PurchaseResponse()

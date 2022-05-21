@@ -1,45 +1,36 @@
 from email import message
 from django.test import TestCase
 from django_grpc_framework.test import Channel
-import market_pb2, market_pb2_grpc
+from django.utils import timezone as tz
+from google.protobuf.timestamp_pb2 import Timestamp
+from django.utils.timezone import is_naive
+from pathlib import Path
 from market.models.offer import Offer, BW_PERIOD
 from market.models.purchase_order import PurchaseOrder
 from market.models.contract import Contract
-from django.utils import timezone as tz
-from market.serializers import OfferProtoSerializer
-from google.protobuf.timestamp_pb2 import Timestamp
-from django.utils.timezone import is_naive
+from market.serializers import OfferProtoSerializer, serialize_to_bytes
+from util import crypto
+
+import market_pb2, market_pb2_grpc
 
 class TestWhiteboard(TestCase):
+    fixtures = ['testdata']
     def setUp(self):
         notbefore = tz.datetime.fromisoformat("2022-04-01T20:00:00.000000+00:00")
         notafter = notbefore + tz.timedelta(seconds=4*BW_PERIOD)
-        o1 = Offer.objects.create(iaid=1, iscore=True, signature=b"",
-                                  reachable_paths="",
-                                  notbefore=notbefore,
-                                  notafter=notafter,
-                                  qos_class=1,
-                                  price_per_nanounit=10,
-                                  bw_profile="2,2,2,2")
-        o2 = Offer.objects.create(iaid=2, iscore=True, signature=b"",
-                                  reachable_paths="",
-                                  notbefore=notbefore,
-                                  notafter=notafter,
-                                  qos_class=1,
-                                  price_per_nanounit=10,
-                                  bw_profile="2,2,2,2")
-        o3 = Offer.objects.create(iaid=3, iscore=True, signature=b"",
-                                  reachable_paths="",
-                                  notbefore=notbefore,
-                                  notafter=notafter,
-                                  qos_class=1,
-                                  price_per_nanounit=10,
-                                  bw_profile="2,2,2,2")
-        self.offers = {
-            1: o1,
-            2: o2,
-            3: o3,
-        }
+        self.offers = {}
+        for iaid in ["1-ff00:0:110", "1-ff00:0:111", "1-ff00:0:112"]:
+            self.offers[iaid] = Offer.objects.create(
+                iaid=iaid,
+                iscore=True,
+                signature=b"1",
+                reachable_paths="",
+                notbefore=notbefore,
+                notafter=notafter,
+                qos_class=1,
+                price_per_nanounit=10,
+                bw_profile="2,2,2,2"
+            )
 
     def test_list(self):
         with Channel() as channel:
@@ -62,27 +53,37 @@ class TestWhiteboard(TestCase):
             notbefore = tz.datetime.fromisoformat("2022-04-01T20:00:00.000000+00:00")
             notafter = notbefore + tz.timedelta(seconds=4*BW_PERIOD)
             o = market_pb2.Offer(
-                iaid=1,
+                iaid="1-ff00:0:111",
                 iscore=True,
-                signature=b"",
                 notbefore=Timestamp(seconds=int(notbefore.timestamp())),
                 notafter=Timestamp(seconds=int(notafter.timestamp())),
                 reachable_paths="*",
                 qos_class=1,
                 price_per_nanounit=10,
                 bw_profile="2,2,2,2")
+            # load private key
+            with open(Path(__file__).parent.joinpath("data", "1-ff00_0_111.key"), "r") as f:
+                key = crypto.load_key(f.read())
+            # sign with private key
+            data = serialize_to_bytes(o)
+            o.signature = crypto.signature_create(key, data)
+            # call RPC
             saved_offer = stub.AddOffer(o)
             self.assertEqual(Offer.objects.all().count(), len(self.offers)+1)
+            # get the created offer
+            saved = Offer.objects.get(id=saved_offer.id)
+            # verify it's signed by the broker
+            saved.validate_signature()
 
     def test_purchase(self):
         with Channel() as channel:
             stub = market_pb2_grpc.MarketControllerStub(channel)
-            matched_offer = self.offers[1]
+            matched_offer = next(iter(self.offers.values()))
             starting_on = matched_offer.notbefore
             request = market_pb2.PurchaseRequest(
                 offer_id=matched_offer.id,
                 buyer_id=42,
-                signature=b"",
+                signature=b"1",
                 bw_profile="2",
                 starting_on=Timestamp(seconds=int(starting_on.timestamp())))
             response = stub.Purchase(request)

@@ -1,6 +1,9 @@
 from django.test import TestCase
 from django.core.exceptions import ValidationError
 from util.conversion import ia_validator, ia_str_to_int
+from pathlib import Path
+from market.models.ases import AS
+from util import crypto
 
 
 class TestConversions(TestCase):
@@ -49,3 +52,48 @@ class TestValidators(TestCase):
         # the following cases should not throw anything:
         v("1-1")
         v("1-ff:0:1")
+
+
+class TestSignatures(TestCase):
+    fixtures = ["testdata"]
+    def test_create_signature(self):
+        # load private key
+        with open(Path(__file__).parent.joinpath("data", "broker.key"), "r") as f:
+            key = crypto.load_key(f.read())
+        # load certificate
+        with open(Path(__file__).parent.joinpath("data", "broker.crt"), "r") as f:
+            cert = crypto.load_certificate(f.read())
+        # sign something
+        data = "hello world".encode("ascii")
+        signature = crypto.signature_create(key, data)
+        # validate signature
+        crypto.signature_validate(cert, signature, data)
+        # modify contents and validate signature
+        bad_data = b'1' + data[1:]
+        self.assertRaises(
+            ValueError,
+            crypto.signature_validate,
+            cert, signature, bad_data
+        )
+        # revert and validate signature
+        crypto.signature_validate(cert, signature, data)
+        # modify signature and validate signature
+        self.assertNotEqual(signature[0], b'1') # if equal, change the b'1' to something else below
+        bad_signature = b'1' + signature[1:]
+        self.assertRaises(
+            ValueError,
+            crypto.signature_validate,
+            cert, bad_signature, data
+        )
+
+    def test_validate_with_as(self):
+        # load private key
+        with open(Path(__file__).parent.joinpath("data", "1-ff00_0_111.key"), "r") as f:
+            key = crypto.load_key(f.read())
+        # get certificate from AS
+        cert = crypto.load_certificate(AS.objects.get(iaid="1-ff00:0:111").certificate_pem)
+        # sign
+        data = "hello world".encode("ascii")
+        signature = crypto.signature_create(key, data)
+        # validate
+        crypto.signature_validate(cert, signature, data)
