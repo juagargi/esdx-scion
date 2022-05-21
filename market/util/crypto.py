@@ -1,11 +1,16 @@
 from datetime import datetime
+from multiprocessing.sharedctypes import Value
 from cryptography import x509
 from cryptography.x509.oid import NameOID
 from cryptography.x509 import load_pem_x509_certificate, load_der_x509_certificate
+from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.serialization import load_pem_private_key, load_der_private_key
+from cryptography.hazmat.primitives.asymmetric import padding
+
+import base64
 
 
 def get_common_name(cert: x509.Certificate) -> str:
@@ -74,6 +79,9 @@ def key_to_pem(key: rsa.RSAPrivateKey, password: bytes = None) -> str:
 
 
 def load_certificate(data):
+    """ data can either be bytes or string (it will be automatically converted) """
+    if isinstance(data, str):
+        data = data.encode("ascii")
     try:
         cert = load_der_x509_certificate(data)
     except ValueError:
@@ -85,6 +93,9 @@ def load_certificate(data):
 
 
 def load_key(data, password=None):
+    """ data can either be bytes or string (it will be automatically converted) """
+    if isinstance(data, str):
+        data = data.encode("ascii")
     try:
         key = load_der_private_key(data, password=password)
     except (TypeError, ValueError):
@@ -93,3 +104,33 @@ def load_key(data, password=None):
         except ValueError:
             raise ValueError("this does not look like a DER or PEM private key")
     return key
+
+
+def signature_create(key: rsa.RSAPrivateKey, data: bytes) -> str:
+    s = key.sign(
+        data,
+        padding.PSS(
+            mgf=padding.MGF1(hashes.SHA256()),
+            salt_length=padding.PSS.MAX_LENGTH
+        ),
+        hashes.SHA256()
+    )
+    # encode it in base64
+    return base64.standard_b64encode(s)
+
+
+def signature_validate(cert: x509.Certificate, signature: str, data: bytes) -> None:
+    # decode signature from base64
+    s = base64.standard_b64decode(signature)
+    try:
+        cert.public_key().verify(
+            s,
+            data,
+            padding.PSS(
+                mgf=padding.MGF1(hashes.SHA256()),
+                salt_length=padding.PSS.MAX_LENGTH
+            ),
+            hashes.SHA256()
+        )
+    except InvalidSignature:
+        raise ValueError("invalid signature")

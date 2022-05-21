@@ -2,7 +2,7 @@ from tracemalloc import start
 from django.test import TestCase
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives import serialization
-from market.models.offer import Offer, BW_PERIOD
+from market.models.offer import Offer, BW_PERIOD, fields_serialize_to_bytes
 from market.models.purchase_order import PurchaseOrder
 from market.models.contract import Contract
 from market.models.ases import AS
@@ -17,7 +17,7 @@ class TestOffer(TestCase):
         notbefore = tz.datetime.fromisoformat("2022-04-01T20:00:00.000000+00:00")
         profile = ",".join(["2" for i in range(int(periods))])
         notafter = notbefore + tz.timedelta(seconds=periods*BW_PERIOD)
-        return Offer.objects.create(iaid=1, iscore=True, signature=b"",
+        return Offer.objects.create(iaid="1-ff00:0:111", iscore=True, signature=b"",
                                     reachable_paths="",
                                     notbefore=notbefore,
                                     notafter=notafter,
@@ -98,6 +98,20 @@ class TestOffer(TestCase):
         starting_at = o.notbefore + tz.timedelta(seconds=2*BW_PERIOD)
         new_profile = o.purchase("1,1", starting_at)
         self.assertEqual(new_profile, None)
+
+    def test_fields_serialize_to_bytes(self):
+        t0 = datetime.datetime.utcfromtimestamp(11)
+        t1 = datetime.datetime.utcfromtimestamp(12)
+        b = fields_serialize_to_bytes(
+            "1-ff00:0:111",
+            True,
+            int(t0.timestamp()),
+            int(t1.timestamp()),
+            "path1,path2",
+            1,
+            100,
+            "2,2,2,2")
+        self.assertEqual("ia:1-ff00:0:11111112reachable:path1,path21100profile:2,2,2,2".encode("ascii"), b)
 
 
 class TestAS(TestCase):

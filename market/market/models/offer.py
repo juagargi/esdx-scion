@@ -5,7 +5,7 @@ from django.db.models.signals import pre_save, pre_delete
 from django.dispatch import receiver
 from defs import BW_PERIOD, BW_UNIT
 
-from util.conversion import csv_to_intlist
+from util.conversion import csv_to_intlist, ia_validator
 from datetime import datetime
 
 
@@ -28,9 +28,12 @@ class Offer(models.Model):
 
     objects = OfferManager()
 
-    iaid = models.BigIntegerField()
+    iaid = models.CharField(blank=False,
+                            max_length=255,
+                            verbose_name="The IA id like 1-ff00:1:1",
+                            validators=[ia_validator()])
     iscore = models.BooleanField()
-    signature = models.BinaryField()  # in the DB, this is signed by the IXP
+    signature = models.TextField()  # in the DB, this is signed by the IXP
     notbefore = models.DateTimeField()
     notafter = models.DateTimeField()  # the difference notafter - notbefore is len(bw_profile)
     # this will be a '\n' separated list of comma separated lists of ISD-AS#IF,IF sequences
@@ -105,3 +108,22 @@ def _offer_pre_delete(sender, instance, **kwargs):
     existing or past contracts.
     """
     raise RuntimeError("logic error: pre_delete: not allowed to delete any Offer object")
+
+
+def fields_serialize_to_bytes(
+    iaid: str,
+    iscore:bool,
+    notbefore: int,
+    notafter: int,
+    reachable_paths: str,
+    qos_class: int,
+    price_per_nanounit: int,
+    bw_profile: str) -> bytes:
+    """
+    Fields:
+    notbefore, notafter: in seconds from UTC epoch
+    """
+    s = "ia:" + iaid + ("1" if iscore else "0") + str(notbefore) + str(notafter) + \
+        "reachable:" + reachable_paths + str(qos_class) + str(price_per_nanounit) + \
+        "profile:" + bw_profile
+    return s.encode("ascii")
