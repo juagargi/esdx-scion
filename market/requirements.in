@@ -6,3 +6,4 @@ djangorestframework
 grpcio
 grpcio-tools
 pip-tools
+pyyaml
