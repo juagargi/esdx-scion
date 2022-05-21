@@ -25,6 +25,30 @@ class TestOffer(TestCase):
                                     price_per_nanounit=10,
                                     bw_profile=profile)
 
+    def test_pre_save(self):
+        """ test that the pre save hook works """
+        # bad interval
+        o = self._create_offer(3)
+        o.notafter = datetime.datetime.now()
+        self.assertRaises(
+            ValueError,
+            o.save
+        )
+        # bad interval
+        o = self._create_offer(3)
+        o.notbefore = o.notafter + tz.timedelta(seconds=1)
+        self.assertRaises(
+            ValueError,
+            o.save
+        )
+        # bad profile or bad interval
+        o = self._create_offer(3)
+        o.bw_profile = "2"
+        self.assertRaises(
+            ValueError,
+            o.save
+        )
+
     def test_multiple_of_bw_period(self):
         o = self._create_offer(1)
         o.save()
@@ -116,7 +140,6 @@ class TestOffer(TestCase):
 
 class TestAS(TestCase):
     def test_as_creation(self):
-        # TODO(juagargi)
         # create a key
         key = rsa.generate_private_key(
             public_exponent=65537,

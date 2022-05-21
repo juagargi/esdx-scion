@@ -47,7 +47,6 @@ class Offer(models.Model):
 
     def _pre_save(self):
         """ Checks validity, profile length """
-        # TODO(juagargi) add test checking this function
         if is_naive(self.notbefore) or is_naive(self.notafter):
             raise ValueError("naive (without timezone) datetime objects not supported")
         if self.notafter < self.notbefore:
