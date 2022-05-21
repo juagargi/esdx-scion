@@ -28,8 +28,10 @@ class PurchaseOrder(models.Model):
     starting_on = models.DateTimeField()
 
     def _pre_save(self):
-        if not self.validate_signature():
-            raise ValueError("invalid purchase order signature")
+        try:
+            self.validate_signature()
+        except ValueError as ex:
+            raise ValueError("invalid purchase order signature") from ex
 
     def serialize_to_bytes(self) -> bytes:
         offerbytes = self.offer.serialize_to_bytes()

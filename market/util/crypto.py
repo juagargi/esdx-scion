@@ -121,7 +121,10 @@ def signature_create(key: rsa.RSAPrivateKey, data: bytes) -> str:
 
 def signature_validate(cert: x509.Certificate, signature: str, data: bytes) -> None:
     # decode signature from base64
-    s = base64.standard_b64decode(signature)
+    try:
+        s = base64.standard_b64decode(signature)
+    except:
+        raise ValueError("invalid signature")
     try:
         cert.public_key().verify(
             s,

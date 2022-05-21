@@ -9,6 +9,7 @@ from market.models.offer import Offer, BW_PERIOD
 from market.models.purchase_order import PurchaseOrder
 from market.models.contract import Contract
 from market.serializers import OfferProtoSerializer, serialize_to_bytes
+from market.purchases import sign_purchase_order
 from util import crypto
 
 import market_pb2, market_pb2_grpc
@@ -80,18 +81,23 @@ class TestWhiteboard(TestCase):
             stub = market_pb2_grpc.MarketControllerStub(channel)
             matched_offer = next(iter(self.offers.values()))
             starting_on = matched_offer.notbefore
+            # create a signature for the purchase order
+            with open(Path(__file__).parent.joinpath("data", "1-ff00_0_112.key"), "r") as f:
+                key = crypto.load_key(f.read()) # load private key
+            signature = sign_purchase_order(
+                key,
+                matched_offer,
+                starting_on,
+                "2"
+            )
+
             request = market_pb2.PurchaseRequest(
                 offer_id=matched_offer.id,
                 buyer_iaid="1-ff00:0:112",
-                signature=b"1",
+                signature=signature,
                 bw_profile="2",
                 starting_on=Timestamp(seconds=int(starting_on.timestamp())))
             response = stub.Purchase(request)
-            return
-
-
-
-
             self.assertGreater(response.new_offer_id, 0, response.message)
             self.assertGreater(response.contract_id, 0, response.message)
             self.assertEqual(Offer.objects.available(id=matched_offer.id).count(), 0) # sold already

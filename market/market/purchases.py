@@ -1,10 +1,12 @@
 from datetime import datetime
 from django.db import transaction
 from typing import Tuple
+from cryptography.hazmat.primitives.asymmetric import rsa
 from market.models.offer import Offer
 from market.models.ases import AS
-from market.models.purchase_order import PurchaseOrder
+from market.models.purchase_order import PurchaseOrder, fields_serialize_to_bytes
 from market.models.contract import Contract
+from util import crypto
 
 
 
@@ -41,3 +43,18 @@ def purchase_offer(offer: Offer,
         offer.bw_profile = new_profile
         offer.save()
         return contract, offer
+
+
+def sign_purchase_order(
+    buyer_key: rsa.RSAPrivateKey,
+    o: Offer,
+    starting_on: datetime,
+    bw_profile: str) -> str:
+    """ creates a signature for the fields of a purchase order """
+    data = fields_serialize_to_bytes(
+        o.serialize_to_bytes(),
+        bw_profile,
+        int(starting_on.timestamp())
+    )
+    print(f"deleteme data: {data}")
+    return crypto.signature_create(buyer_key, data)
