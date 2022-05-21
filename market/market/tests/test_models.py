@@ -2,12 +2,13 @@ from tracemalloc import start
 from django.test import TestCase
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives import serialization
-from market.models.offer import Offer, BW_PERIOD, fields_serialize_to_bytes
+from market.models.offer import Offer, BW_PERIOD
 from market.models.purchase_order import PurchaseOrder
 from market.models.contract import Contract
 from market.models.ases import AS
 from django.utils import timezone as tz
 from util import crypto
+from util import serialize
 
 import datetime
 
@@ -126,7 +127,7 @@ class TestOffer(TestCase):
     def test_fields_serialize_to_bytes(self):
         t0 = datetime.datetime.utcfromtimestamp(11)
         t1 = datetime.datetime.utcfromtimestamp(12)
-        b = fields_serialize_to_bytes(
+        b = serialize.offer_fields_serialize_to_bytes(
             "1-ff00:0:111",
             True,
             int(t0.timestamp()),

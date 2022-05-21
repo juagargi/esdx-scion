@@ -1,7 +1,8 @@
-from market.models.offer import Offer, fields_serialize_to_bytes
+from market.models.offer import Offer
 from market.models.ases import AS
 from market.models.broker import Broker
 from util import crypto
+from util import serialize
 from django_grpc_framework import proto_serializers
 from rest_framework import serializers
 import market_pb2
@@ -61,7 +62,7 @@ class OfferProtoSerializer(proto_serializers.ProtoSerializer):
         self.validated_data["signature"] = signature
 
     def serialize_to_bytes(self) -> bytes:
-        return fields_serialize_to_bytes(
+        return serialize.offer_fields_serialize_to_bytes(
             self.validated_data["iaid"],
             self.validated_data["iscore"],
             int(self.validated_data["notbefore"].timestamp()),
@@ -71,16 +72,3 @@ class OfferProtoSerializer(proto_serializers.ProtoSerializer):
             self.validated_data["price_per_nanounit"],
             self.validated_data["bw_profile"]
         )
-
-
-def serialize_to_bytes(o: market_pb2.Offer) -> bytes:
-    return fields_serialize_to_bytes(
-        o.iaid,
-        o.iscore,
-        o.notbefore.seconds,
-        o.notafter.seconds,
-        o.reachable_paths,
-        o.qos_class,
-        o.price_per_nanounit,
-        o.bw_profile
-    )

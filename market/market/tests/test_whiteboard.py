@@ -8,9 +8,9 @@ from pathlib import Path
 from market.models.offer import Offer, BW_PERIOD
 from market.models.purchase_order import PurchaseOrder
 from market.models.contract import Contract
-from market.serializers import OfferProtoSerializer, serialize_to_bytes
 from market.purchases import sign_purchase_order
 from util import crypto
+from util import serialize
 
 import market_pb2, market_pb2_grpc
 
@@ -66,7 +66,7 @@ class TestWhiteboard(TestCase):
             with open(Path(__file__).parent.joinpath("data", "1-ff00_0_111.key"), "r") as f:
                 key = crypto.load_key(f.read())
             # sign with private key
-            data = serialize_to_bytes(o)
+            data = serialize.offer_serialize_to_bytes(o)
             o.signature = crypto.signature_create(key, data)
             # call RPC
             saved_offer = stub.AddOffer(o)

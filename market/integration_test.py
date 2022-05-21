@@ -15,7 +15,9 @@ from django.utils import timezone as tz
 from google.protobuf.timestamp_pb2 import Timestamp
 from concurrent.futures import ThreadPoolExecutor
 from defs import BW_PERIOD
+from market.serializers import serialize_to_bytes
 from util.conversion import pb_timestamp_from_time
+from util import crypto
 
 import sys
 import os
@@ -60,7 +62,7 @@ def provider():
         notbefore = tz.datetime.fromisoformat("2022-04-01T20:00:00.000000+00:00")
         notafter = notbefore + tz.timedelta(seconds=4*BW_PERIOD)
         o = market_pb2.Offer(
-            iaid=1,
+            iaid="1-ff00:0:110",
             iscore=True,
             signature=b"",
             notbefore=Timestamp(seconds=int(notbefore.timestamp())),
@@ -69,6 +71,13 @@ def provider():
             qos_class=1,
             price_per_nanounit=10,
             bw_profile="2,2,2,2")
+        with open(Path(__file__).parent.joinpath("market", "tests", "data",
+            "1-ff00_0_110.key"), "r") as f:
+            key = crypto.load_key(f.read())
+        # sign with private key
+        data = serialize_to_bytes(o)
+        o.signature = crypto.signature_create(key, data)
+        # do RPC
         stub.AddOffer(o)
 
 

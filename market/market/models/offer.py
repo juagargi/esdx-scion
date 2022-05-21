@@ -9,6 +9,7 @@ from datetime import datetime
 from market.models.broker import Broker
 from util.conversion import csv_to_intlist, ia_validator
 from util import crypto
+from util import serialize
 
 
 class OfferManager(models.Manager):
@@ -63,7 +64,7 @@ class Offer(models.Model):
                              f"{lifespan.total_seconds() // BW_PERIOD} values; contains {len(profile)}")
 
     def serialize_to_bytes(self):
-        return fields_serialize_to_bytes(
+        return serialize.offer_fields_serialize_to_bytes(
             self.iaid,
             self.iscore,
             int(self.notbefore.timestamp()),
@@ -126,22 +127,3 @@ def _offer_pre_delete(sender, instance, **kwargs):
     existing or past contracts.
     """
     raise RuntimeError("logic error: pre_delete: not allowed to delete any Offer object")
-
-
-def fields_serialize_to_bytes(
-    iaid: str,
-    iscore:bool,
-    notbefore: int,
-    notafter: int,
-    reachable_paths: str,
-    qos_class: int,
-    price_per_nanounit: int,
-    bw_profile: str) -> bytes:
-    """
-    Fields:
-    notbefore, notafter: in seconds from UTC epoch
-    """
-    s = "ia:" + iaid + ("1" if iscore else "0") + str(notbefore) + str(notafter) + \
-        "reachable:" + reachable_paths + str(qos_class) + str(price_per_nanounit) + \
-        "profile:" + bw_profile
-    return s.encode("ascii")
