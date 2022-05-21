@@ -21,7 +21,7 @@ message ListRequest {}
 
 message Offer {
     int64 id = 1;  // the ID of this offer
-    int64 iaid = 2; // ISD-AS ID of the seller
+    string iaid = 2; // ISD-AS ID of the seller
     bool iscore = 3;
     bytes signature = 4;
     google.protobuf.Timestamp notbefore = 5;
