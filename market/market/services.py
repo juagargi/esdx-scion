@@ -1,5 +1,5 @@
 from django_grpc_framework.services import Service
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from market.models.offer import Offer
 from market.models.ases import AS
 from market.models.broker import Broker
@@ -31,23 +31,27 @@ class MarketService(Service):
 
     def Purchase(self, request, context):
         response = market_pb2.PurchaseResponse()
-        with transaction.atomic():
-            try:
-                offer = Offer.objects.get(id=request.offer_id)
-            except Offer.DoesNotExist:
-                response.message = f"offer id {request.offer_id} not found"
-                return response
-            starts_at = time_from_pb_timestamp(request.starting_on)
+        try:
+            with transaction.atomic():
+                try:
+                    offer = Offer.objects.get(id=request.offer_id)
+                except Offer.DoesNotExist:
+                    response.message = f"offer id {request.offer_id} not found"
+                    return response
+                starts_at = time_from_pb_timestamp(request.starting_on)
 
-            try:
-                contract, offer = purchase_offer(offer,
-                                                 request.buyer_iaid,
-                                                 starts_at,
-                                                 request.bw_profile,
-                                                 request.signature)
-            except ValueError as ex:
-                response.message = str(ex)
-                return response
+                try:
+                    contract, offer = purchase_offer(offer,
+                                                    request.buyer_iaid,
+                                                    starts_at,
+                                                    request.bw_profile,
+                                                    request.signature)
+                except ValueError as ex:
+                    response.message = str(ex)
+                    return response
+        except IntegrityError:
+            response.message = "data was modified during the transaction"
+            return response
 
         response.message = ""
         response.contract_id = contract.id

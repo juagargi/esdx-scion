@@ -14,10 +14,11 @@
 from django.utils import timezone as tz
 from google.protobuf.timestamp_pb2 import Timestamp
 from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 from defs import BW_PERIOD
-from market.serializers import serialize_to_bytes
 from util.conversion import pb_timestamp_from_time
 from util import crypto
+from util import serialize
 
 import sys
 import os
@@ -35,14 +36,31 @@ def _list(channel):
     return offers
 
 
-def _buy(channel, buyer_id, offer_id):
+def _buy(channel, key, buyer_ia, offer):
     stub = market_pb2_grpc.MarketControllerStub(channel)
     request = market_pb2.PurchaseRequest(
-        offer_id=offer_id,
-        buyer_id=buyer_id,
+        offer_id=offer.id,
+        buyer_iaid=buyer_ia,
         signature=b"",
         bw_profile="1,1,1,1",
         starting_on=pb_timestamp_from_time(tz.datetime.fromisoformat("2022-04-01T20:00:00.000000+00:00")))
+    # sign the purchase request
+    offerbytes = serialize.offer_fields_serialize_to_bytes(
+        offer.iaid,
+        offer.iscore,
+        offer.notbefore.ToSeconds(),
+        offer.notafter.ToSeconds(),
+        offer.reachable_paths,
+        offer.qos_class,
+        offer.price_per_nanounit,
+        offer.bw_profile
+    )
+    data = serialize.purchase_order_fields_serialize_to_bytes(
+        offerbytes,
+        request.bw_profile,
+        request.starting_on.ToSeconds()
+    )
+    request.signature = crypto.signature_create(key, data)
     return stub.Purchase(request)
 
 
@@ -50,6 +68,10 @@ def run_django():
     if os.path.exists("db.sqlite3"):
         os.remove("db.sqlite3")
     p = subprocess.Popen(["./manage.py", "migrate"], stdout=subprocess.DEVNULL)
+    p.wait()
+    p = subprocess.Popen(
+        ["./manage.py", "loaddata", "./market/fixtures/testdata.yaml"],
+        stdout=subprocess.DEVNULL)
     p.wait()
     p = subprocess.Popen(["./manage.py", "grpcrunserver"])
     time.sleep(1)
@@ -75,44 +97,56 @@ def provider():
             "1-ff00_0_110.key"), "r") as f:
             key = crypto.load_key(f.read())
         # sign with private key
-        data = serialize_to_bytes(o)
+        data = serialize.offer_serialize_to_bytes(o)
         o.signature = crypto.signature_create(key, data)
         # do RPC
-        stub.AddOffer(o)
+        saved = stub.AddOffer(o)
+        print(f"provider created offer with id {saved.id}")
 
 
-def client(id: int, wait: int):
+def client(ia: str, wait: int):
+    # load key
+    iafile = ia.replace(":", "_")
+    with open(Path(__file__).parent.joinpath("market", "tests", "data", iafile + ".key"), "r") as f:
+        key = crypto.load_key(f.read())
+    # buy
     for _ in range(2):
         with grpc.insecure_channel('localhost:50051') as channel:
             offers = _list(channel)
             time.sleep(wait)
             o = offers[0]
-            response = _buy(channel, id, o.id)
+            response = _buy(channel, key, ia, o)
             if response.contract_id > 0:
-                print(f"Client with ID: {id} got contract with ID: {response.contract_id}")
-                return
-            print(f"Client with ID: {id} could not buy")
-    print(f"Client with ID: {id} too many attempts")
-    sys.exit(1)
+                print(f"Client with ID: {ia} got contract with ID: {response.contract_id}")
+                return 0
+            print(f"Client with ID: {ia} could not buy: {response.message}")
+    print(f"Client with ID: {ia} too many attempts")
+    return 1
 
 
 def main():
+    # run django like this, or change to what is said on
+    # https://stackoverflow.com/questions/19447603/how-to-kill-a-python-child-process-created-with-\
+    # subprocess-check-output-when-t/19448096#19448096
     django = run_django()
     provider()
     with ThreadPoolExecutor() as executor:
         tasks = [
-            executor.submit(lambda: client(1, 1)),
-            executor.submit(lambda: client(2, 0)),
+            executor.submit(lambda: client("1-ff00:0:111", 1)),
+            executor.submit(lambda: client("1-ff00:0:112", 0)),
         ]
+    res = 0
     for t in tasks:
-        t.result()
+        if t.result() != 0:
+            res = 1
     django.terminate()
     try:
         django.wait(timeout=1)
-    except:
-        django.kill()
-    print("ok")
-    return 0
+    finally:
+        pass
+    django.kill()
+    print(f"done (exits with {res})")
+    return res
 
 
 if __name__ == "__main__":

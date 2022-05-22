@@ -4,6 +4,7 @@ from django.db.models.signals import pre_save
 from django.dispatch import receiver
 from market.models.offer import Offer
 from util import crypto
+from util import serialize
 
 
 class PurchaseOrder(models.Model):
@@ -35,7 +36,7 @@ class PurchaseOrder(models.Model):
 
     def serialize_to_bytes(self) -> bytes:
         offerbytes = self.offer.serialize_to_bytes()
-        return fields_serialize_to_bytes(
+        return serialize.purchase_order_fields_serialize_to_bytes(
             offerbytes,
             self.bw_profile,
             int(self.starting_on.timestamp())
@@ -54,16 +55,3 @@ class PurchaseOrder(models.Model):
 def _purchaseorder_pre_save(sender, instance, **kwargs):
     """ signal for pre_save validates instance before saving it """
     instance._pre_save()
-
-
-def fields_serialize_to_bytes(
-    offer_bytes: bytes,
-    bw_profile: str,
-    starting_on: int) -> bytes:
-    """
-    Fields:
-    offer: offer serialized to bytes, without signature
-    starting_on: in seconds from UTC epoch
-    """
-    return b"offer:" + offer_bytes + b"bw_profile:" + bw_profile.encode("ascii") + \
-        b"starting_on:" + str(starting_on).encode("ascii")

@@ -9,6 +9,7 @@ from market.models.purchase_order import PurchaseOrder
 from market.models.broker import Broker
 from util.conversion import csv_to_intlist
 from util import crypto
+from util import serialize
 
 
 class Contract(models.Model):
@@ -41,7 +42,7 @@ class Contract(models.Model):
         crypto.signature_validate(cert, self.signature_broker, data)
 
     def serialize_to_bytes(self) -> bytes:
-        return fields_serialize_to_bytes(
+        return serialize.contract_fields_serialize_to_bytes(
             self.purchase_order.serialize_to_bytes(),
             self.purchase_order.signature,
             self.timestamp
@@ -62,18 +63,3 @@ class Contract(models.Model):
 def _contract_pre_save(sender, instance, **kwargs):
     """ signal for pre_save validates instance before saving it """
     instance._pre_save()
-
-
-def fields_serialize_to_bytes(
-    purchase_order_bytes: bytes,
-    buyer_signature: str,
-    timestamp: int,
-) -> bytes:
-    """
-    Fields:
-    buyer_signature: signature of the purchase order, by the buyer, base64 encoded
-    timestamp: in seconds since UTC epoch
-    """
-    return b"order:" + purchase_order_bytes + \
-        b"signature_buyer:" + buyer_signature.encode("ascii") + \
-        b"timestamp:" + str(timestamp).encode("ascii")

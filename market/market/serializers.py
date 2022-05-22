@@ -23,6 +23,7 @@ class OfferProtoSerializer(proto_serializers.ProtoSerializer):
         model = Offer
         proto_class = market_pb2.Offer
 
+    id = serializers.IntegerField()
     iaid = serializers.CharField(max_length=32)
     iscore = serializers.BooleanField()
     signature = serializers.CharField(max_length=1024)

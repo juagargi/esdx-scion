@@ -4,9 +4,10 @@ from typing import Tuple
 from cryptography.hazmat.primitives.asymmetric import rsa
 from market.models.offer import Offer
 from market.models.ases import AS
-from market.models.purchase_order import PurchaseOrder, fields_serialize_to_bytes
-from market.models.contract import Contract, fields_serialize_to_bytes as contract_serialize
+from market.models.purchase_order import PurchaseOrder
+from market.models.contract import Contract
 from util import crypto
+from util import serialize
 
 
 
@@ -52,7 +53,7 @@ def sign_purchase_order(
     starting_on: datetime,
     bw_profile: str) -> str:
     """ creates a signature for the fields of a purchase order """
-    data = fields_serialize_to_bytes(
+    data = serialize.purchase_order_fields_serialize_to_bytes(
         o.serialize_to_bytes(),
         bw_profile,
         int(starting_on.timestamp())
