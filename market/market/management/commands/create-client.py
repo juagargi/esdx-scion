@@ -1,8 +1,8 @@
-from django.core.management.base import BaseCommand, CommandError
+from django.core.management.base import BaseCommand
 from django.db import transaction
 from market.models.ases import AS
 from util.conversion import ia_validator
-from util.crypto import load_certificate, load_key
+from util.crypto import load_certificate
 
 import argparse
 import sys

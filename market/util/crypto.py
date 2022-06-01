@@ -1,5 +1,4 @@
 from datetime import datetime
-from multiprocessing.sharedctypes import Value
 from cryptography import x509
 from cryptography.x509.oid import NameOID
 from cryptography.x509 import load_pem_x509_certificate, load_der_x509_certificate

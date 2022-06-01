@@ -1,12 +1,9 @@
-from email import message
 from django.test import TestCase
 from django_grpc_framework.test import Channel
 from django.utils import timezone as tz
 from google.protobuf.timestamp_pb2 import Timestamp
-from django.utils.timezone import is_naive
 from pathlib import Path
 from market.models.offer import Offer, BW_PERIOD
-from market.models.purchase_order import PurchaseOrder
 from market.models.contract import Contract
 from market.purchases import sign_purchase_order
 from util import crypto

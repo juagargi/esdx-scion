@@ -10,7 +10,6 @@ from util import crypto
 from util import serialize
 
 
-
 def purchase_offer(offer: Offer,
                    buyer_iaid: str,
                    buyer_starting_on: datetime,

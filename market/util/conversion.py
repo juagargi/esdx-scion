@@ -2,8 +2,6 @@ from typing import List
 from django.utils import timezone as tz
 from django.core.exceptions import ValidationError
 from google.protobuf.timestamp_pb2 import Timestamp
-from cryptography.x509 import load_pem_x509_certificate, load_der_x509_certificate
-from cryptography.hazmat.primitives.serialization import load_pem_private_key, load_der_private_key
 import pytz
 
 

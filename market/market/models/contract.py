@@ -1,13 +1,10 @@
 from django.db import models
-from django.core import validators
 from django.utils import timezone as tz
-from django.utils.timezone import is_naive
 from django.db.models.signals import pre_save
 from django.dispatch import receiver
 
 from market.models.purchase_order import PurchaseOrder
 from market.models.broker import Broker
-from util.conversion import csv_to_intlist
 from util import crypto
 from util import serialize
 

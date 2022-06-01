@@ -1,10 +1,6 @@
-from tracemalloc import start
 from django.test import TestCase
 from cryptography.hazmat.primitives.asymmetric import rsa
-from cryptography.hazmat.primitives import serialization
 from market.models.offer import Offer, BW_PERIOD
-from market.models.purchase_order import PurchaseOrder
-from market.models.contract import Contract
 from market.models.ases import AS
 from django.utils import timezone as tz
 from util import crypto

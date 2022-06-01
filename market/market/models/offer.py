@@ -3,7 +3,7 @@ from django.core import validators
 from django.utils.timezone import is_naive
 from django.db.models.signals import pre_save, pre_delete
 from django.dispatch import receiver
-from defs import BW_PERIOD, BW_UNIT
+from defs import BW_PERIOD
 from datetime import datetime
 
 from market.models.broker import Broker
