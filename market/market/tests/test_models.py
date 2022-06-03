@@ -19,7 +19,7 @@ class TestOffer(TestCase):
                                     notbefore=notbefore,
                                     notafter=notafter,
                                     qos_class=1,
-                                    price_per_nanounit=10,
+                                    price_per_picounit=10,
                                     bw_profile=profile)
 
     def test_pre_save(self):

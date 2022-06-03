@@ -31,7 +31,7 @@ class OfferProtoSerializer(proto_serializers.ProtoSerializer):
     notafter = serializers.DateTimeField()
     reachable_paths = serializers.CharField()
     qos_class = serializers.IntegerField()
-    price_per_nanounit = serializers.IntegerField()
+    price_per_picounit = serializers.IntegerField()
     bw_profile = serializers.CharField()
 
     embed_in_specs = [f.name for f in market_pb2.OfferSpecification().DESCRIPTOR.fields]
@@ -88,6 +88,6 @@ class OfferProtoSerializer(proto_serializers.ProtoSerializer):
             int(self.validated_data["notafter"].timestamp()),
             self.validated_data["reachable_paths"],
             self.validated_data["qos_class"],
-            self.validated_data["price_per_nanounit"],
+            self.validated_data["price_per_picounit"],
             self.validated_data["bw_profile"]
         )
