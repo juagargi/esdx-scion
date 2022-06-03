@@ -49,14 +49,14 @@ def _buy(channel, key, buyer_ia, offer):
         starting_on=pb_timestamp_from_time(tz.datetime.fromisoformat("2022-04-01T20:00:00.000000+00:00")))
     # sign the purchase request
     offerbytes = serialize.offer_fields_serialize_to_bytes(
-        offer.iaid,
-        offer.iscore,
-        offer.notbefore.ToSeconds(),
-        offer.notafter.ToSeconds(),
-        offer.reachable_paths,
-        offer.qos_class,
-        offer.price_per_nanounit,
-        offer.bw_profile
+        offer.specs.iaid,
+        offer.specs.is_core,
+        offer.specs.notbefore.ToSeconds(),
+        offer.specs.notafter.ToSeconds(),
+        offer.specs.reachable_paths,
+        offer.specs.qos_class,
+        offer.specs.price_per_nanounit,
+        offer.specs.bw_profile
     )
     data = serialize.purchase_order_fields_serialize_to_bytes(
         offerbytes,
@@ -96,21 +96,24 @@ def provider():
         notbefore = tz.datetime.fromisoformat("2022-04-01T20:00:00.000000+00:00")
         notafter = notbefore + tz.timedelta(seconds=4*BW_PERIOD)
         o = market_pb2.Offer(
-            iaid="1-ff00:0:110",
-            iscore=True,
-            signature=b"",
-            notbefore=Timestamp(seconds=int(notbefore.timestamp())),
-            notafter=Timestamp(seconds=int(notafter.timestamp())),
-            reachable_paths="*",
-            qos_class=1,
-            price_per_nanounit=10,
-            bw_profile="2,2,2,2")
+            specs=market_pb2.OfferSpecification(
+                iaid="1-ff00:0:110",
+                is_core=True,
+                signature=b"",
+                notbefore=Timestamp(seconds=int(notbefore.timestamp())),
+                notafter=Timestamp(seconds=int(notafter.timestamp())),
+                reachable_paths="*",
+                qos_class=1,
+                price_per_nanounit=10,
+                bw_profile="2,2,2,2",
+            ),
+        )
         with open(Path(__file__).parent.joinpath("market", "tests", "data",
             "1-ff00_0_110.key"), "r") as f:
             key = crypto.load_key(f.read())
         # sign with private key
         data = serialize.offer_serialize_to_bytes(o)
-        o.signature = crypto.signature_create(key, data)
+        o.specs.signature = crypto.signature_create(key, data)
         # do RPC
         saved = stub.AddOffer(o)
         print(f"provider created offer with id {saved.id}")

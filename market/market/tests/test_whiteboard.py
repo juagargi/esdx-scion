@@ -3,6 +3,7 @@ from django_grpc_framework.test import Channel
 from django.utils import timezone as tz
 from google.protobuf.timestamp_pb2 import Timestamp
 from pathlib import Path
+from market.serializers import OfferProtoSerializer
 from market.models.offer import Offer, BW_PERIOD
 from market.models.contract import Contract
 from market.purchases import sign_purchase_order
@@ -20,7 +21,7 @@ class TestWhiteboard(TestCase):
         for iaid in ["1-ff00:0:110", "1-ff00:0:111", "1-ff00:0:112"]:
             self.offers[iaid] = Offer.objects.create(
                 iaid=iaid,
-                iscore=True,
+                is_core=True,
                 signature=b"1",
                 reachable_paths="",
                 notbefore=notbefore,
@@ -30,6 +31,20 @@ class TestWhiteboard(TestCase):
                 bw_profile="2,2,2,2"
             )
 
+    def test_serialize_offer(self):
+        offer = next(iter(self.offers.values()))
+        serializer = OfferProtoSerializer(offer)
+        msg = serializer.message
+        self.assertEqual(offer.id, msg.id)
+        self.assertEqual(offer.iaid, msg.specs.iaid)
+        self.assertEqual(offer.is_core, msg.specs.is_core)
+        self.assertEqual(int(offer.notbefore.timestamp()), msg.specs.notbefore.seconds)
+        self.assertEqual(int(offer.notafter.timestamp()), msg.specs.notafter.seconds)
+        self.assertEqual(offer.qos_class, msg.specs.qos_class)
+        self.assertEqual(offer.price_per_nanounit, msg.specs.price_per_nanounit)
+        self.assertEqual(offer.bw_profile, msg.specs.bw_profile)
+        # self.assertEqual(offer.signature, msg.specs.signature)
+
     def test_list(self):
         with Channel() as channel:
             stub = market_pb2_grpc.MarketControllerStub(channel)
@@ -37,8 +52,8 @@ class TestWhiteboard(TestCase):
         offers = [o for o in offers]
         self.assertEqual(len(offers), len(self.offers))
         for o in offers:
-            self.assertTrue(o.iaid in self.offers)
-            g = self.offers[o.iaid]
+            self.assertTrue(o.specs.iaid in self.offers)
+            g = self.offers[o.specs.iaid]
             fs = Offer._meta.fields
             for f in fs:
                 expected = getattr(g, f.name)
@@ -51,20 +66,23 @@ class TestWhiteboard(TestCase):
             notbefore = tz.datetime.fromisoformat("2022-04-01T20:00:00.000000+00:00")
             notafter = notbefore + tz.timedelta(seconds=4*BW_PERIOD)
             o = market_pb2.Offer(
-                iaid="1-ff00:0:111",
-                iscore=True,
-                notbefore=Timestamp(seconds=int(notbefore.timestamp())),
-                notafter=Timestamp(seconds=int(notafter.timestamp())),
-                reachable_paths="*",
-                qos_class=1,
-                price_per_nanounit=10,
-                bw_profile="2,2,2,2")
+                specs=market_pb2.OfferSpecification(
+                    iaid="1-ff00:0:111",
+                    is_core=True,
+                    notbefore=Timestamp(seconds=int(notbefore.timestamp())),
+                    notafter=Timestamp(seconds=int(notafter.timestamp())),
+                    reachable_paths="*",
+                    qos_class=1,
+                    price_per_nanounit=10,
+                    bw_profile="2,2,2,2",
+                )
+            )
             # load private key
             with open(Path(__file__).parent.joinpath("data", "1-ff00_0_111.key"), "r") as f:
                 key = crypto.load_key(f.read())
             # sign with private key
             data = serialize.offer_serialize_to_bytes(o)
-            o.signature = crypto.signature_create(key, data)
+            o.specs.signature = crypto.signature_create(key, data)
             # call RPC
             saved_offer = stub.AddOffer(o)
             self.assertEqual(Offer.objects.all().count(), len(self.offers)+1)

@@ -14,7 +14,7 @@ class TestOffer(TestCase):
         notbefore = tz.datetime.fromisoformat("2022-04-01T20:00:00.000000+00:00")
         profile = ",".join(["2" for i in range(int(periods))])
         notafter = notbefore + tz.timedelta(seconds=periods*BW_PERIOD)
-        return Offer.objects.create(iaid="1-ff00:0:111", iscore=True, signature=b"",
+        return Offer.objects.create(iaid="1-ff00:0:111", is_core=True, signature=b"",
                                     reachable_paths="",
                                     notbefore=notbefore,
                                     notafter=notafter,

@@ -35,7 +35,7 @@ class Offer(models.Model):
                             max_length=255,
                             verbose_name="The IA id like 1-ff00:1:1",
                             validators=[ia_validator()])
-    iscore = models.BooleanField()
+    is_core = models.BooleanField()
     signature = models.TextField()  # in the DB, this is signed by the IXP (base64 encoded)
     notbefore = models.DateTimeField()
     notafter = models.DateTimeField()  # the difference notafter - notbefore is len(bw_profile)
@@ -66,7 +66,7 @@ class Offer(models.Model):
     def serialize_to_bytes(self):
         return serialize.offer_fields_serialize_to_bytes(
             self.iaid,
-            self.iscore,
+            self.is_core,
             int(self.notbefore.timestamp()),
             int(self.notafter.timestamp()),
             self.reachable_paths,

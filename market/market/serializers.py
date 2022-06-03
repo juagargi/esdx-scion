@@ -25,7 +25,7 @@ class OfferProtoSerializer(proto_serializers.ProtoSerializer):
 
     id = serializers.IntegerField()
     iaid = serializers.CharField(max_length=32)
-    iscore = serializers.BooleanField()
+    is_core = serializers.BooleanField()
     signature = serializers.CharField(max_length=1024)
     notbefore = serializers.DateTimeField()
     notafter = serializers.DateTimeField()
@@ -34,9 +34,27 @@ class OfferProtoSerializer(proto_serializers.ProtoSerializer):
     price_per_nanounit = serializers.IntegerField()
     bw_profile = serializers.CharField()
 
-    def is_valid(self, *args, **kwargs):
-        """ a gRPC Offer is being validated """
-        super().is_valid(*args, **kwargs)
+    embed_in_specs = [f.name for f in market_pb2.OfferSpecification().DESCRIPTOR.fields]
+
+    def message_to_data(self, message: market_pb2.Offer) -> dict:
+        data = super().message_to_data(message)
+        # move values from specs to plain dict
+        d = data
+        for k, v in data["specs"].items():
+            d[k] = v
+        del d["specs"]
+        return d
+
+    def data_to_message(self, data: dict) -> market_pb2.Offer:
+        d = {
+            "specs": {},
+        }
+        for k, v in data.items():
+            if k in self.embed_in_specs:
+                d["specs"][k] = v
+            else:
+                d[k] = v
+        return super().data_to_message(d)
 
     def create(self, values):
         return Offer.objects.create(**values)
@@ -65,7 +83,7 @@ class OfferProtoSerializer(proto_serializers.ProtoSerializer):
     def serialize_to_bytes(self) -> bytes:
         return serialize.offer_fields_serialize_to_bytes(
             self.validated_data["iaid"],
-            self.validated_data["iscore"],
+            self.validated_data["is_core"],
             int(self.validated_data["notbefore"].timestamp()),
             int(self.validated_data["notafter"].timestamp()),
             self.validated_data["reachable_paths"],

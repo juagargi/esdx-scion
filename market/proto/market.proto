@@ -19,17 +19,22 @@ service MarketController {
 
 message ListRequest {}
 
+// Immutable values an offer has. These are constant throughout the life of the offer.
+message OfferSpecification {
+    string iaid = 1;
+    bool is_core = 2;
+    google.protobuf.Timestamp notbefore = 3;
+    google.protobuf.Timestamp notafter = 4;
+    string reachable_paths = 5;
+    int32 qos_class = 6;
+    int64 price_per_nanounit = 7;
+    string bw_profile = 8;
+    string signature = 9; // the signature checks all the previous fields
+}
+
 message Offer {
     int64 id = 1;  // the ID of this offer
-    string iaid = 2; // ISD-AS ID of the seller
-    bool iscore = 3;
-    string signature = 4; // base64 encoded
-    google.protobuf.Timestamp notbefore = 5;
-    google.protobuf.Timestamp notafter = 6;
-    string reachable_paths = 7;
-    int32 qos_class = 8;
-    string bw_profile = 9;  // list of bw_units per period
-    int32 price_per_nanounit = 10;
+    OfferSpecification specs = 2;
 }
 
 message PurchaseRequest {
@@ -58,15 +63,7 @@ message Contract {
     // the signature from the broker (IXP) covers all fields
     bytes contract_signature = 3;
     // details about the offer:
-    int64 offer_seller_ia = 10;
-    bool offer_seller_is_core = 11;
-    google.protobuf.Timestamp offer_notbefore = 12;
-    google.protobuf.Timestamp offer_notafter = 13;
-    string offer_reachable_paths = 14;
-    int32 offer_qos_class = 15;
-    int64 offer_price_per_nanounit = 16;
-    string offer_bw_profile = 17;
-    bytes offer_signature = 18;
+    OfferSpecification offer = 10;
     // details about the buyer
     int64 buyer_ia = 50;
     google.protobuf.Timestamp buyer_starting_on = 51;
