@@ -28,6 +28,9 @@ import grpc
 import market_pb2
 import market_pb2_grpc
 
+import signal
+import ctypes
+
 
 def _list(channel):
     stub = market_pb2_grpc.MarketControllerStub(channel)
@@ -73,7 +76,16 @@ def run_django():
         ["./manage.py", "loaddata", "./market/fixtures/testdata.yaml"],
         stdout=subprocess.DEVNULL)
     p.wait()
-    p = subprocess.Popen(["./manage.py", "grpcrunserver"])
+
+    # from https://stackoverflow.com/questions/19447603/how-to-kill-a-python-child-process-\
+    # created-with-subprocess-check-output-when-t/19448096#19448096
+    libc = ctypes.CDLL("libc.so.6")
+    def set_pdeathsig(sig = signal.SIGTERM):
+        def callable():
+            return libc.prctl(1, sig)
+        return callable
+    p = subprocess.Popen(["./manage.py", "grpcrunserver"],
+        preexec_fn=set_pdeathsig(signal.SIGTERM))
     time.sleep(1)
     return p
 
@@ -125,9 +137,6 @@ def client(ia: str, wait: int):
 
 
 def main():
-    # run django like this, or change to what is said on
-    # https://stackoverflow.com/questions/19447603/how-to-kill-a-python-child-process-created-with-\
-    # subprocess-check-output-when-t/19448096#19448096
     django = run_django()
     provider()
     with ThreadPoolExecutor() as executor:
@@ -143,8 +152,8 @@ def main():
     try:
         django.wait(timeout=1)
     finally:
-        pass
-    django.kill()
+        django.terminate()
+        django.kill()
     print(f"done (exits with {res})")
     return res
 
