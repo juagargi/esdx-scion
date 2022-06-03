@@ -65,26 +65,24 @@ class TestWhiteboard(TestCase):
             stub = market_pb2_grpc.MarketControllerStub(channel)
             notbefore = tz.datetime.fromisoformat("2022-04-01T20:00:00.000000+00:00")
             notafter = notbefore + tz.timedelta(seconds=4*BW_PERIOD)
-            o = market_pb2.Offer(
-                specs=market_pb2.OfferSpecification(
-                    iaid="1-ff00:0:111",
-                    is_core=True,
-                    notbefore=Timestamp(seconds=int(notbefore.timestamp())),
-                    notafter=Timestamp(seconds=int(notafter.timestamp())),
-                    reachable_paths="*",
-                    qos_class=1,
-                    price_per_nanounit=10,
-                    bw_profile="2,2,2,2",
-                )
+            specs=market_pb2.OfferSpecification(
+                iaid="1-ff00:0:111",
+                is_core=True,
+                notbefore=Timestamp(seconds=int(notbefore.timestamp())),
+                notafter=Timestamp(seconds=int(notafter.timestamp())),
+                reachable_paths="*",
+                qos_class=1,
+                price_per_nanounit=10,
+                bw_profile="2,2,2,2",
             )
             # load private key
             with open(Path(__file__).parent.joinpath("data", "1-ff00_0_111.key"), "r") as f:
                 key = crypto.load_key(f.read())
             # sign with private key
-            data = serialize.offer_serialize_to_bytes(o)
-            o.specs.signature = crypto.signature_create(key, data)
+            data = serialize.offer_specification_serialize_to_bytes(specs)
+            specs.signature = crypto.signature_create(key, data)
             # call RPC
-            saved_offer = stub.AddOffer(o)
+            saved_offer = stub.AddOffer(specs)
             self.assertEqual(Offer.objects.all().count(), len(self.offers)+1)
             # get the created offer
             saved = Offer.objects.get(id=saved_offer.id)

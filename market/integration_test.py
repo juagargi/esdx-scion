@@ -95,27 +95,25 @@ def provider():
         stub = market_pb2_grpc.MarketControllerStub(channel)
         notbefore = tz.datetime.fromisoformat("2022-04-01T20:00:00.000000+00:00")
         notafter = notbefore + tz.timedelta(seconds=4*BW_PERIOD)
-        o = market_pb2.Offer(
-            specs=market_pb2.OfferSpecification(
-                iaid="1-ff00:0:110",
-                is_core=True,
-                signature=b"",
-                notbefore=Timestamp(seconds=int(notbefore.timestamp())),
-                notafter=Timestamp(seconds=int(notafter.timestamp())),
-                reachable_paths="*",
-                qos_class=1,
-                price_per_nanounit=10,
-                bw_profile="2,2,2,2",
-            ),
+        specs=market_pb2.OfferSpecification(
+            iaid="1-ff00:0:110",
+            is_core=True,
+            signature=b"",
+            notbefore=Timestamp(seconds=int(notbefore.timestamp())),
+            notafter=Timestamp(seconds=int(notafter.timestamp())),
+            reachable_paths="*",
+            qos_class=1,
+            price_per_nanounit=10,
+            bw_profile="2,2,2,2",
         )
         with open(Path(__file__).parent.joinpath("market", "tests", "data",
             "1-ff00_0_110.key"), "r") as f:
             key = crypto.load_key(f.read())
         # sign with private key
-        data = serialize.offer_serialize_to_bytes(o)
-        o.specs.signature = crypto.signature_create(key, data)
+        data = serialize.offer_specification_serialize_to_bytes(specs)
+        specs.signature = crypto.signature_create(key, data)
         # do RPC
-        saved = stub.AddOffer(o)
+        saved = stub.AddOffer(specs)
         print(f"provider created offer with id {saved.id}")
 
 

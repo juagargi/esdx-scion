@@ -12,7 +12,7 @@ import "google/protobuf/timestamp.proto";
 
 service MarketController {
     rpc ListOffers(ListRequest) returns (stream Offer) {}
-    rpc AddOffer(Offer) returns (Offer) {}
+    rpc AddOffer(OfferSpecification) returns (Offer) {}
     rpc Purchase(PurchaseRequest) returns (PurchaseResponse) {}
     rpc GetContract(GetContractRequest) returns (Contract) {}
 }

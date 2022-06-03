@@ -18,8 +18,7 @@ class MarketService(Service):
             yield offer
 
     def AddOffer(self, request, context):
-        request.id = 0 # force to zero because we will get an id from the DB
-        grpc_offer = OfferProtoSerializer(message=request)
+        grpc_offer = OfferProtoSerializer(message=market_pb2.Offer(specs=request))
         grpc_offer.is_valid(raise_exception=True)
         grpc_offer.validate_signature_from_seller()
         grpc_offer.sign_with_broker()

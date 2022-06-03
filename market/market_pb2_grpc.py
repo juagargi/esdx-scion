@@ -25,7 +25,7 @@ class MarketControllerStub(object):
                 )
         self.AddOffer = channel.unary_unary(
                 '/market.MarketController/AddOffer',
-                request_serializer=market__pb2.Offer.SerializeToString,
+                request_serializer=market__pb2.OfferSpecification.SerializeToString,
                 response_deserializer=market__pb2.Offer.FromString,
                 )
         self.Purchase = channel.unary_unary(
@@ -81,7 +81,7 @@ def add_MarketControllerServicer_to_server(servicer, server):
             ),
             'AddOffer': grpc.unary_unary_rpc_method_handler(
                     servicer.AddOffer,
-                    request_deserializer=market__pb2.Offer.FromString,
+                    request_deserializer=market__pb2.OfferSpecification.FromString,
                     response_serializer=market__pb2.Offer.SerializeToString,
             ),
             'Purchase': grpc.unary_unary_rpc_method_handler(
@@ -137,7 +137,7 @@ class MarketController(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/market.MarketController/AddOffer',
-            market__pb2.Offer.SerializeToString,
+            market__pb2.OfferSpecification.SerializeToString,
             market__pb2.Offer.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)

@@ -20,17 +20,21 @@ def offer_fields_serialize_to_bytes(
     return s.encode("ascii")
 
 
-def offer_serialize_to_bytes(o: market_pb2.Offer) -> bytes:
+def offer_specification_serialize_to_bytes(s: market_pb2.OfferSpecification) -> bytes:
     return offer_fields_serialize_to_bytes(
-        o.specs.iaid,
-        o.specs.is_core,
-        o.specs.notbefore.seconds,
-        o.specs.notafter.seconds,
-        o.specs.reachable_paths,
-        o.specs.qos_class,
-        o.specs.price_per_nanounit,
-        o.specs.bw_profile
+        s.iaid,
+        s.is_core,
+        s.notbefore.seconds,
+        s.notafter.seconds,
+        s.reachable_paths,
+        s.qos_class,
+        s.price_per_nanounit,
+        s.bw_profile
     )
+
+
+def offer_serialize_to_bytes(o: market_pb2.Offer) -> bytes:
+    return offer_specification_serialize_to_bytes(o.specs)
 
 
 def purchase_order_fields_serialize_to_bytes(
