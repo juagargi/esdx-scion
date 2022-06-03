@@ -36,7 +36,7 @@ class Offer(models.Model):
                             verbose_name="The IA id like 1-ff00:1:1",
                             validators=[ia_validator()])
     is_core = models.BooleanField()
-    signature = models.TextField()  # in the DB, this is signed by the IXP (base64 encoded)
+    signature = models.BinaryField() # in the DB, this is signed by the IXP
     notbefore = models.DateTimeField()
     notafter = models.DateTimeField()  # the difference notafter - notbefore is len(bw_profile)
     # this will be a '\n' separated list of comma separated lists of ISD-AS#IF,IF sequences

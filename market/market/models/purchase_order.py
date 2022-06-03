@@ -24,7 +24,7 @@ class PurchaseOrder(models.Model):
         'AS',
         on_delete=models.PROTECT
     )
-    signature = models.TextField()
+    signature = models.BinaryField()
     bw_profile = models.TextField(validators=[validators.int_list_validator()])
     starting_on = models.DateTimeField()
 

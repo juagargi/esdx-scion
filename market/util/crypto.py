@@ -105,8 +105,8 @@ def load_key(data, password=None):
     return key
 
 
-def signature_create(key: rsa.RSAPrivateKey, data: bytes) -> str:
-    s = key.sign(
+def signature_create(key: rsa.RSAPrivateKey, data: bytes) -> bytes:
+    return key.sign(
         data,
         padding.PSS(
             mgf=padding.MGF1(hashes.SHA256()),
@@ -114,19 +114,12 @@ def signature_create(key: rsa.RSAPrivateKey, data: bytes) -> str:
         ),
         hashes.SHA256()
     )
-    # encode it in base64
-    return base64.standard_b64encode(s).decode("ascii")
 
 
-def signature_validate(cert: x509.Certificate, signature: str, data: bytes) -> None:
-    # decode signature from base64
-    try:
-        s = base64.standard_b64decode(signature)
-    except:
-        raise ValueError("invalid signature")
+def signature_validate(cert: x509.Certificate, signature: bytes, data: bytes) -> None:
     try:
         cert.public_key().verify(
-            s,
+            signature,
             data,
             padding.PSS(
                 mgf=padding.MGF1(hashes.SHA256()),
@@ -134,5 +127,5 @@ def signature_validate(cert: x509.Certificate, signature: str, data: bytes) -> N
             ),
             hashes.SHA256()
         )
-    except InvalidSignature:
-        raise ValueError("invalid signature")
+    except InvalidSignature as ex:
+        raise ValueError("invalid signature") from ex

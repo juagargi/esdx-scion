@@ -29,7 +29,7 @@ message OfferSpecification {
     int32 qos_class = 6;
     int64 price_per_picounit = 7; // price of 10^-12 units (BW_PERIOD * BW_UNIT)
     string bw_profile = 8;
-    string signature = 9; // the signature checks all the previous fields
+    bytes signature = 9; // the signature checks all the previous fields
 }
 
 message Offer {
@@ -40,7 +40,7 @@ message Offer {
 message PurchaseRequest {
     int64 offer_id = 1;
     string buyer_iaid = 2; // ISD-AS ID of the buyer
-    string signature = 3; // base64 encoded
+    bytes signature = 3; // base64 encoded
     string bw_profile = 4;
     google.protobuf.Timestamp starting_on = 5;
 }

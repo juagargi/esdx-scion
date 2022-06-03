@@ -11,10 +11,10 @@ import base64
 
 class BinaryField(serializers.Field):
     """ this binary field uses base64 encoding """
-    def to_internal_value(self, data):
+    def to_internal_value(self, data: str) -> bytes:
         return base64.standard_b64decode(data)
 
-    def to_representation(self, value):
+    def to_representation(self, value: bytes) -> bytes:
         return base64.standard_b64encode(value)
 
 
@@ -26,7 +26,7 @@ class OfferProtoSerializer(proto_serializers.ProtoSerializer):
     id = serializers.IntegerField()
     iaid = serializers.CharField(max_length=32)
     is_core = serializers.BooleanField()
-    signature = serializers.CharField(max_length=1024)
+    signature = BinaryField()
     notbefore = serializers.DateTimeField()
     notafter = serializers.DateTimeField()
     reachable_paths = serializers.CharField()

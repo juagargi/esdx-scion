@@ -52,7 +52,7 @@ def purchase_order_fields_serialize_to_bytes(
 
 def contract_fields_serialize_to_bytes(
     purchase_order_bytes: bytes,
-    buyer_signature: str,
+    buyer_signature: bytes,
     timestamp: int,
 ) -> bytes:
     """
@@ -61,5 +61,5 @@ def contract_fields_serialize_to_bytes(
     timestamp: in seconds since UTC epoch
     """
     return b"order:" + purchase_order_bytes + \
-        b"signature_buyer:" + buyer_signature.encode("ascii") + \
+        b"signature_buyer:" + buyer_signature + \
         b"timestamp:" + str(timestamp).encode("ascii")
