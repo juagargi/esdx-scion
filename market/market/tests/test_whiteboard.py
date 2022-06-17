@@ -27,7 +27,7 @@ class TestWhiteboard(TestCase):
                 notbefore=notbefore,
                 notafter=notafter,
                 qos_class=1,
-                price_per_picounit=10,
+                price_per_unit=0.000000001,
                 bw_profile="2,2,2,2"
             )
 
@@ -41,7 +41,7 @@ class TestWhiteboard(TestCase):
         self.assertEqual(int(offer.notbefore.timestamp()), msg.specs.notbefore.seconds)
         self.assertEqual(int(offer.notafter.timestamp()), msg.specs.notafter.seconds)
         self.assertEqual(offer.qos_class, msg.specs.qos_class)
-        self.assertEqual(offer.price_per_picounit, msg.specs.price_per_picounit)
+        self.assertEqual(offer.price_per_unit, msg.specs.price_per_unit)
         self.assertEqual(offer.bw_profile, msg.specs.bw_profile)
         # self.assertEqual(offer.signature, msg.specs.signature)
 
@@ -72,7 +72,7 @@ class TestWhiteboard(TestCase):
                 notafter=Timestamp(seconds=int(notafter.timestamp())),
                 reachable_paths="*",
                 qos_class=1,
-                price_per_picounit=10,
+                price_per_unit=0.000000123,
                 bw_profile="2,2,2,2",
             )
             # load private key

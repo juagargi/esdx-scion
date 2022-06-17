@@ -55,7 +55,7 @@ def _buy(channel, key, buyer_ia, offer):
         offer.specs.notafter.ToSeconds(),
         offer.specs.reachable_paths,
         offer.specs.qos_class,
-        offer.specs.price_per_picounit,
+        offer.specs.price_per_unit,
         offer.specs.bw_profile
     )
     data = serialize.purchase_order_fields_serialize_to_bytes(
@@ -103,7 +103,7 @@ def provider():
             notafter=Timestamp(seconds=int(notafter.timestamp())),
             reachable_paths="*",
             qos_class=1,
-            price_per_picounit=10,
+            price_per_unit=0.000000001,
             bw_profile="2,2,2,2",
         )
         with open(Path(__file__).parent.joinpath("market", "tests", "data",

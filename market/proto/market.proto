@@ -27,7 +27,7 @@ message OfferSpecification {
     google.protobuf.Timestamp notafter = 4;
     string reachable_paths = 5;
     int32 qos_class = 6;
-    int64 price_per_picounit = 7; // price of 10^-12 units (BW_PERIOD * BW_UNIT)
+    double price_per_unit = 7; // price of 600 * 1 Megabits (BW_PERIOD * BW_STEP)
     string bw_profile = 8;
     bytes signature = 9; // the signature checks all the previous fields
 }

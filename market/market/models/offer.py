@@ -42,8 +42,8 @@ class Offer(models.Model):
     # this will be a '\n' separated list of comma separated lists of ISD-AS#IF,IF sequences
     reachable_paths = models.TextField()
     qos_class = models.IntegerField()  # TRD
-    # bw per period, e.g. 3,3,2,4,4 means 3 BW_UNIT during the first BW_PERIOD, then 3, then 2, etc
-    price_per_picounit = models.IntegerField()
+    # bw per period, e.g. 3,3,2,4,4 means 3 BW_STEP during the first BW_PERIOD, then 3, then 2, etc
+    price_per_unit = models.FloatField()
     bw_profile = models.TextField(validators=[validators.int_list_validator()])
 
     def _pre_save(self):
@@ -71,7 +71,7 @@ class Offer(models.Model):
             int(self.notafter.timestamp()),
             self.reachable_paths,
             self.qos_class,
-            self.price_per_picounit,
+            self.price_per_unit,
             self.bw_profile
         )
 

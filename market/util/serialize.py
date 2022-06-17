@@ -8,14 +8,14 @@ def offer_fields_serialize_to_bytes(
     notafter: int,
     reachable_paths: str,
     qos_class: int,
-    price_per_picounit: int,
+    price_per_unit: float,
     bw_profile: str) -> bytes:
     """
     Fields:
     notbefore, notafter: in seconds from UTC epoch
     """
     s = "ia:" + iaid + ("1" if is_core else "0") + str(notbefore) + str(notafter) + \
-        "reachable:" + reachable_paths + str(qos_class) + str(price_per_picounit) + \
+        "reachable:" + reachable_paths + str(qos_class) + str(price_per_unit) + \
         "profile:" + bw_profile
     return s.encode("ascii")
 
@@ -28,7 +28,7 @@ def offer_specification_serialize_to_bytes(s: market_pb2.OfferSpecification) -> 
         s.notafter.seconds,
         s.reachable_paths,
         s.qos_class,
-        s.price_per_picounit,
+        s.price_per_unit,
         s.bw_profile
     )
 
