@@ -53,7 +53,7 @@ message PurchaseResponse {
 
 message GetContractRequest {
     int64 contract_id = 1;
-    int64 requester_id = 2;
+    string requester_iaid = 2;
     bytes requester_signature = 3;
 }
 
@@ -65,7 +65,7 @@ message Contract {
     // details about the offer:
     OfferSpecification offer = 10;
     // details about the buyer
-    int64 buyer_ia = 50;
+    string buyer_iaid = 50;
     google.protobuf.Timestamp buyer_starting_on = 51;
     string buyer_bw_profile = 52;
     bytes buyer_signature = 53;
