@@ -37,14 +37,15 @@ class Client:
     def __init__(self, ia: str, wait_seconds: int):
         self.ia = ia
         self.wait = wait_seconds
+        self.key = None
         self.stub = None
 
-    def _list(self, channel):
+    def _list(self):
         response = self.stub.ListOffers(market_pb2.ListRequest())
         offers = [o for o in response]
         return offers
 
-    def _buy(self, channel, key, offer):
+    def _buy(self, offer):
         request = market_pb2.PurchaseRequest(
             offer_id=offer.id,
             buyer_iaid=self.ia,
@@ -67,31 +68,47 @@ class Client:
             request.bw_profile,
             request.starting_on.ToSeconds()
         )
-        request.signature = crypto.signature_create(key, data)
+        request.signature = crypto.signature_create(self.key, data)
         return self.stub.Purchase(request)
+
+    def _get_contract(self, contract_id: int):
+        data = serialize.get_contract_request_serialize(
+            contract_id=contract_id,
+            requester_iaid=self.ia,
+            signature=None,
+        )
+        request = market_pb2.GetContractRequest(
+            contract_id=contract_id,
+            requester_iaid=self.ia,
+            requester_signature=crypto.signature_create(self.key, data),
+        )
+        return self.stub.GetContract(request)
 
     def run(self):
         # load key
         iafile = self.ia.replace(":", "_")
         with open(Path(__file__).parent.joinpath("market", "tests",\
             "data", iafile + ".key"), "r") as f:
-            key = crypto.load_key(f.read())
+            self.key = crypto.load_key(f.read())
         # buy
         with grpc.insecure_channel('localhost:50051') as channel:
             self.stub = market_pb2_grpc.MarketControllerStub(channel)
             for _ in range(2):
-                offers = self._list(channel)
+                offers = self._list()
                 time.sleep(self.wait)
-                o = offers[0]
-                response = self._buy(channel, key, o)
+                response = self._buy(offers[0])
                 if response.contract_id > 0:
                     print(f"Client with ID: {self.ia} got contract with ID: {response.contract_id}")
                     break
                 print(f"Client with ID: {self.ia} could not buy: {response.message}")
+            if response.contract_id <= 0:
+                print(f"Client with ID: {self.ia} too many attempts")
+                return 1
+            contract = self._get_contract(response.contract_id)
+            # send contract to the topology reloader
+            # TODO(juagargi)
+
         self.stub = None
-        if response.contract_id <= 0:
-            print(f"Client with ID: {self.ia} too many attempts")
-            return 1
         return 0
 
 
