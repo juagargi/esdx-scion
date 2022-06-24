@@ -1,5 +1,6 @@
 from typing import List
 from django.utils import timezone as tz
+from django.utils import dateparse
 from django.core.exceptions import ValidationError
 from google.protobuf.timestamp_pb2 import Timestamp
 import pytz
@@ -10,6 +11,10 @@ def csv_to_intlist(csv: str) -> List[int]:
     return list(map(int, l))  # do int("4") for each component
 
 
+def time_from_str(s: str):
+    return dateparse.parse_datetime(s)
+
+
 def time_from_pb_timestamp(timestamp):
     t = tz.datetime.fromtimestamp(timestamp.seconds + timestamp.nanos / 1e9)
     return t.replace(tzinfo=pytz.utc)
@@ -17,6 +22,10 @@ def time_from_pb_timestamp(timestamp):
 
 def pb_timestamp_from_time(time):
     return Timestamp(seconds=int(time.timestamp()))
+
+
+def pb_timestamp_from_str(s: str):
+    return pb_timestamp_from_time(time_from_str(s))
 
 
 def ia_str_to_int(ia: str) -> int:

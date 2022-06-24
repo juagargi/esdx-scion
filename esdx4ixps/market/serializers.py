@@ -1,12 +1,16 @@
+from django_grpc_framework import proto_serializers
+from google.protobuf.timestamp_pb2 import Timestamp
 from market.models.offer import Offer
 from market.models.ases import AS
 from market.models.broker import Broker
+from market.models.contract import Contract
+from util import conversion
 from util import crypto
 from util import serialize
-from django_grpc_framework import proto_serializers
 from rest_framework import serializers
-import market_pb2
+
 import base64
+import market_pb2
 
 
 class BinaryField(serializers.Field):
@@ -90,4 +94,43 @@ class OfferProtoSerializer(proto_serializers.ProtoSerializer):
             self.validated_data["qos_class"],
             self.validated_data["price_per_unit"],
             self.validated_data["bw_profile"]
+        )
+
+
+class ContractProtoSerializer(proto_serializers.ModelProtoSerializer):
+    class Meta:
+        model = Contract
+        proto_class = market_pb2.Contract
+        fields = ["id", "timestamp", "signature_broker", "purchase_order"]
+        depth = 2
+
+    def __eq__(self,o: object) -> bool:
+        return type(o) == ContractProtoSerializer and self.data == o.data
+
+    # def message_to_data(self, message: market_pb2.Contract) -> dict:
+    #     return super().message_to_data(message)
+
+    def data_to_message(self, data: dict) -> market_pb2.Contract:
+        po = data["purchase_order"]
+        buyer = po["buyer"]
+        offer = po["offer"]
+        return market_pb2.Contract(
+            contract_id=data["id"],
+            contract_timestamp=conversion.pb_timestamp_from_str(data["timestamp"]),
+            contract_signature=base64.standard_b64decode(data["signature_broker"]),
+            offer=market_pb2.OfferSpecification(
+                iaid=offer["iaid"],
+                is_core=offer["is_core"],
+                notbefore=conversion.pb_timestamp_from_str(offer["notbefore"]),
+                notafter=conversion.pb_timestamp_from_str(offer["notafter"]),
+                reachable_paths=offer["reachable_paths"],
+                qos_class=int(offer["qos_class"]),
+                price_per_unit=float(offer["price_per_unit"]),
+                bw_profile=offer["bw_profile"],
+                signature=base64.standard_b64decode(offer["signature"]),
+            ),
+            buyer_iaid=buyer["iaid"],
+            buyer_starting_on=conversion.pb_timestamp_from_str(po["starting_on"]),
+            buyer_bw_profile=po["bw_profile"],
+            buyer_signature=base64.standard_b64decode(po["signature"]),
         )

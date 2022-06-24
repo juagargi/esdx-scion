@@ -22,7 +22,7 @@ class Contract(models.Model):
         on_delete=models.CASCADE,
     )
     timestamp = models.DateTimeField()
-    signature_broker = models.BinaryField()
+    signature_broker = models.BinaryField()  # signature from the broker (the IXP)
 
     def _pre_save(self):
         try:

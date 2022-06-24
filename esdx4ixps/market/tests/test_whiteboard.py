@@ -8,6 +8,7 @@ from market.models.contract import Contract
 from market.purchases import sign_purchase_order, sign_get_contract_request
 from market.serializers import OfferProtoSerializer
 from market import services
+from util import conversion
 from util import crypto
 from util import serialize
 
@@ -125,14 +126,14 @@ class TestWhiteboard(TestCase):
             contract = Contract.objects.get(id=response.contract_id)
             self.assertAlmostEqual(contract.timestamp, tz.localtime(), delta=tz.timedelta(seconds=1))
             order = contract.purchase_order
-            self.assertEqual(order.buyer.iaid, "1-ff00:0:112")
-            self.assertEqual(order.bw_profile, "2")
+            self.assertEqual(order.buyer.iaid, request.buyer_iaid)
+            self.assertEqual(order.bw_profile, request.bw_profile)
             return response
 
     def test_get_contract(self):
         purchase_response = self.test_purchase() # buys self.offers[0]
-        # get the contract
         def get_contract_request(ia:str, contract_id: int) -> market_pb2.GetContractRequest:
+            """create the get contract request"""
             # create a signature for the get contract request
             with open(Path(__file__).parent.joinpath("data", ia.replace(":", "_")+".key"), "r") as f:
                 key = crypto.load_key(f.read()) # load private key
@@ -146,7 +147,6 @@ class TestWhiteboard(TestCase):
                 requester_iaid=ia,
                 requester_signature=signature,
             )
-
         with Channel() as channel:
             stub = market_pb2_grpc.MarketControllerStub(channel)
             self.assertRaises(services.MarketServiceError, stub.GetContract,
@@ -159,9 +159,31 @@ class TestWhiteboard(TestCase):
                 ia="1-ff00:0:112",  # this IA is the buyer
                 contract_id=purchase_response.contract_id)
             )
-            print(f"deleteme test_get_contract, type(response) = {type(response)}")
             response2 = stub.GetContract(get_contract_request(
                 ia="1-ff00:0:110",  # this IA is the seller
                 contract_id=purchase_response.contract_id)
             )
             self.assertEqual(response, response2)  # same contract for buyer and seller
+            # check values of the contract
+            contract = Contract.objects.get(id=purchase_response.contract_id)
+            self.assertEqual(response.contract_id, purchase_response.contract_id)
+            self.assertEqual(response.contract_timestamp,
+                conversion.pb_timestamp_from_time(contract.timestamp))
+            self.assertEqual(response.contract_signature, contract.signature_broker)
+            po = contract.purchase_order
+            self.assertEqual(response.buyer_iaid, po.buyer.iaid)
+            self.assertEqual(response.buyer_starting_on,
+                conversion.pb_timestamp_from_time(po.starting_on))
+            self.assertEqual(response.buyer_bw_profile, po.bw_profile)
+            self.assertEqual(response.buyer_signature, po.signature)
+            # check values of the offer embedded in the contract
+            o = response.offer
+            self.assertEqual(o.iaid, po.offer.iaid)
+            self.assertEqual(o.is_core, po.offer.is_core)
+            self.assertEqual(o.notbefore, conversion.pb_timestamp_from_time(po.offer.notbefore))
+            self.assertEqual(o.notafter, conversion.pb_timestamp_from_time(po.offer.notafter))
+            self.assertEqual(o.reachable_paths, po.offer.reachable_paths)
+            self.assertEqual(o.qos_class, po.offer.qos_class)
+            self.assertEqual(o.price_per_unit, po.offer.price_per_unit)
+            self.assertEqual(o.bw_profile, po.offer.bw_profile)
+            self.assertEqual(o.signature, po.offer.signature)

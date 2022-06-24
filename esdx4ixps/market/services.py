@@ -3,7 +3,7 @@ from django.db import IntegrityError, transaction
 from market.models.ases import AS
 from market.models.contract import Contract
 from market.models.offer import Offer
-from market.serializers import OfferProtoSerializer
+from market.serializers import OfferProtoSerializer, ContractProtoSerializer
 from market.purchases import purchase_offer
 from util.conversion import time_from_pb_timestamp
 from util import crypto
@@ -79,7 +79,7 @@ class MarketService(Service):
             if contract.purchase_order.buyer.iaid != request.requester_iaid and \
                 contract.purchase_order.offer.iaid != request.requester_iaid:
                 raise MarketServiceError(f"IA {request.requester_iaid} cannot obtain this contract")
-            return contract
-
+            serializer = ContractProtoSerializer(contract)
+            return serializer.message
         except Exception as ex:
             raise MarketServiceError(str(ex)) from ex
