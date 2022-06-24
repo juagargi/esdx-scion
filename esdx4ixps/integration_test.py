@@ -32,39 +32,68 @@ import signal
 import ctypes
 
 
-def _list(channel):
-    stub = market_pb2_grpc.MarketControllerStub(channel)
-    response = stub.ListOffers(market_pb2.ListRequest())
-    offers = [o for o in response]
-    return offers
+class Client:
+    """a Market service client"""
+    def __init__(self, ia: str, wait_seconds: int):
+        self.ia = ia
+        self.wait = wait_seconds
+        self.stub = None
 
+    def _list(self, channel):
+        response = self.stub.ListOffers(market_pb2.ListRequest())
+        offers = [o for o in response]
+        return offers
 
-def _buy(channel, key, buyer_ia, offer):
-    stub = market_pb2_grpc.MarketControllerStub(channel)
-    request = market_pb2.PurchaseRequest(
-        offer_id=offer.id,
-        buyer_iaid=buyer_ia,
-        signature=b"",
-        bw_profile="1,1,1,1",
-        starting_on=pb_timestamp_from_time(tz.datetime.fromisoformat("2022-04-01T20:00:00.000000+00:00")))
-    # sign the purchase request
-    offerbytes = serialize.offer_fields_serialize_to_bytes(
-        offer.specs.iaid,
-        offer.specs.is_core,
-        offer.specs.notbefore.ToSeconds(),
-        offer.specs.notafter.ToSeconds(),
-        offer.specs.reachable_paths,
-        offer.specs.qos_class,
-        offer.specs.price_per_unit,
-        offer.specs.bw_profile
-    )
-    data = serialize.purchase_order_fields_serialize_to_bytes(
-        offerbytes,
-        request.bw_profile,
-        request.starting_on.ToSeconds()
-    )
-    request.signature = crypto.signature_create(key, data)
-    return stub.Purchase(request)
+    def _buy(self, channel, key, offer):
+        request = market_pb2.PurchaseRequest(
+            offer_id=offer.id,
+            buyer_iaid=self.ia,
+            signature=b"",
+            bw_profile="1,1,1,1",
+            starting_on=pb_timestamp_from_time(tz.datetime.fromisoformat("2022-04-01T20:00:00.000000+00:00")))
+        # sign the purchase request
+        offerbytes = serialize.offer_fields_serialize_to_bytes(
+            offer.specs.iaid,
+            offer.specs.is_core,
+            offer.specs.notbefore.ToSeconds(),
+            offer.specs.notafter.ToSeconds(),
+            offer.specs.reachable_paths,
+            offer.specs.qos_class,
+            offer.specs.price_per_unit,
+            offer.specs.bw_profile
+        )
+        data = serialize.purchase_order_fields_serialize_to_bytes(
+            offerbytes,
+            request.bw_profile,
+            request.starting_on.ToSeconds()
+        )
+        request.signature = crypto.signature_create(key, data)
+        return self.stub.Purchase(request)
+
+    def run(self):
+        # load key
+        iafile = self.ia.replace(":", "_")
+        with open(Path(__file__).parent.joinpath("market", "tests",\
+            "data", iafile + ".key"), "r") as f:
+            key = crypto.load_key(f.read())
+        # buy
+        with grpc.insecure_channel('localhost:50051') as channel:
+            self.stub = market_pb2_grpc.MarketControllerStub(channel)
+            for _ in range(2):
+                offers = self._list(channel)
+                time.sleep(self.wait)
+                o = offers[0]
+                response = self._buy(channel, key, o)
+                if response.contract_id > 0:
+                    print(f"Client with ID: {self.ia} got contract with ID: {response.contract_id}")
+                    break
+                print(f"Client with ID: {self.ia} could not buy: {response.message}")
+        self.stub = None
+        if response.contract_id <= 0:
+            print(f"Client with ID: {self.ia} too many attempts")
+            return 1
+        return 0
+
 
 
 def run_django():
@@ -118,25 +147,8 @@ def provider():
 
 
 def client(ia: str, wait: int):
-    # load key
-    iafile = ia.replace(":", "_")
-    with open(Path(__file__).parent.joinpath("market", "tests", "data", iafile + ".key"), "r") as f:
-        key = crypto.load_key(f.read())
-    # buy
-    for attempts in range(2):
-        with grpc.insecure_channel('localhost:50051') as channel:
-            offers = _list(channel)
-            time.sleep(wait)
-            o = offers[0]
-            response = _buy(channel, key, ia, o)
-            if response.contract_id > 0:
-                print(f"Client with ID: {ia} got contract with ID: {response.contract_id}")
-                break
-            print(f"Client with ID: {ia} could not buy: {response.message}")
-    if response.contract_id <= 0:
-        print(f"Client with ID: {ia} too many attempts")
-        return 1
-    return 0
+    c = Client(ia, wait)
+    return c.run()
 
 
 def main():
