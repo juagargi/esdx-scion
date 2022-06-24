@@ -3,10 +3,11 @@ from django_grpc_framework.test import Channel
 from django.utils import timezone as tz
 from google.protobuf.timestamp_pb2 import Timestamp
 from pathlib import Path
-from market.serializers import OfferProtoSerializer
 from market.models.offer import Offer, BW_PERIOD
 from market.models.contract import Contract
 from market.purchases import sign_purchase_order, sign_get_contract_request
+from market.serializers import OfferProtoSerializer
+from market import services
 from util import crypto
 from util import serialize
 
@@ -131,20 +132,36 @@ class TestWhiteboard(TestCase):
     def test_get_contract(self):
         purchase_response = self.test_purchase() # buys self.offers[0]
         # get the contract
-        with Channel() as channel:
-            stub = market_pb2_grpc.MarketControllerStub(channel)
-            request = market_pb2.GetContractRequest(
-                contract_id=purchase_response.contract_id,
-                requester_iaid="1-ff00:0:112",
-            )
+        def get_contract_request(ia:str, contract_id: int) -> market_pb2.GetContractRequest:
             # create a signature for the get contract request
-            with open(Path(__file__).parent.joinpath("data", "1-ff00_0_112.key"), "r") as f:
+            with open(Path(__file__).parent.joinpath("data", ia.replace(":", "_")+".key"), "r") as f:
                 key = crypto.load_key(f.read()) # load private key
             signature = sign_get_contract_request(
                 key,
-                request.requester_iaid,
-                request.contract_id,
+                ia,
+                contract_id,
             )
-            request.requester_signature = signature
-            response = stub.GetContract(request)
+            return market_pb2.GetContractRequest(
+                contract_id=contract_id,
+                requester_iaid=ia,
+                requester_signature=signature,
+            )
+
+        with Channel() as channel:
+            stub = market_pb2_grpc.MarketControllerStub(channel)
+            self.assertRaises(services.MarketServiceError, stub.GetContract,
+                get_contract_request(
+                    ia="1-ff00:0:111",  # this IA shouldn't get the contract (not part of it)
+                    contract_id=purchase_response.contract_id,
+                )
+            )
+            response = stub.GetContract(get_contract_request(
+                ia="1-ff00:0:112",  # this IA is the buyer
+                contract_id=purchase_response.contract_id)
+            )
             print(f"deleteme test_get_contract, type(response) = {type(response)}")
+            response2 = stub.GetContract(get_contract_request(
+                ia="1-ff00:0:110",  # this IA is the seller
+                contract_id=purchase_response.contract_id)
+            )
+            self.assertEqual(response, response2)  # same contract for buyer and seller

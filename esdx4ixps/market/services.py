@@ -74,9 +74,11 @@ class MarketService(Service):
                 requester_iaid=request.requester_iaid,
                 signature=None,
             )
-            print(f"deleteme request={request}")
             crypto.signature_validate(cert,request.requester_signature, data)
             contract = Contract.objects.get(id=request.contract_id)
+            if contract.purchase_order.buyer.iaid != request.requester_iaid and \
+                contract.purchase_order.offer.iaid != request.requester_iaid:
+                raise MarketServiceError(f"IA {request.requester_iaid} cannot obtain this contract")
             return contract
 
         except Exception as ex:
