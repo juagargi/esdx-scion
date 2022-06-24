@@ -123,7 +123,7 @@ def client(ia: str, wait: int):
     with open(Path(__file__).parent.joinpath("market", "tests", "data", iafile + ".key"), "r") as f:
         key = crypto.load_key(f.read())
     # buy
-    for _ in range(2):
+    for attempts in range(2):
         with grpc.insecure_channel('localhost:50051') as channel:
             offers = _list(channel)
             time.sleep(wait)
@@ -131,10 +131,12 @@ def client(ia: str, wait: int):
             response = _buy(channel, key, ia, o)
             if response.contract_id > 0:
                 print(f"Client with ID: {ia} got contract with ID: {response.contract_id}")
-                return 0
+                break
             print(f"Client with ID: {ia} could not buy: {response.message}")
-    print(f"Client with ID: {ia} too many attempts")
-    return 1
+    if response.contract_id <= 0:
+        print(f"Client with ID: {ia} too many attempts")
+        return 1
+    return 0
 
 
 def main():
@@ -147,7 +149,8 @@ def main():
         ]
     res = 0
     for t in tasks:
-        if t.result() != 0:
+        result = t.result()
+        if result != 0:
             res = 1
     django.terminate()
     try:

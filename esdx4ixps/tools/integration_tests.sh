@@ -17,4 +17,4 @@ if [ -n "$tempdir" ]; then
     rmdir "$tempdir"
 fi
 
-exit $?
+exit $RET
