@@ -51,12 +51,6 @@ message PurchaseResponse {
     string message = 3;
 }
 
-message GetContractRequest {
-    int64 contract_id = 1;
-    string requester_iaid = 2;
-    bytes requester_signature = 3;
-}
-
 message Contract {
     int64 contract_id = 1;
     google.protobuf.Timestamp contract_timestamp = 2;
@@ -69,4 +63,10 @@ message Contract {
     google.protobuf.Timestamp buyer_starting_on = 51;
     string buyer_bw_profile = 52;
     bytes buyer_signature = 53;
+}
+
+message GetContractRequest {
+    int64 contract_id = 1;
+    string requester_iaid = 2;
+    bytes requester_signature = 3;
 }

@@ -6,7 +6,7 @@ from pathlib import Path
 from market.serializers import OfferProtoSerializer
 from market.models.offer import Offer, BW_PERIOD
 from market.models.contract import Contract
-from market.purchases import sign_purchase_order
+from market.purchases import sign_purchase_order, sign_get_contract_request
 from util import crypto
 from util import serialize
 
@@ -126,3 +126,25 @@ class TestWhiteboard(TestCase):
             order = contract.purchase_order
             self.assertEqual(order.buyer.iaid, "1-ff00:0:112")
             self.assertEqual(order.bw_profile, "2")
+            return response
+
+    def test_get_contract(self):
+        purchase_response = self.test_purchase() # buys self.offers[0]
+        # get the contract
+        with Channel() as channel:
+            stub = market_pb2_grpc.MarketControllerStub(channel)
+            request = market_pb2.GetContractRequest(
+                contract_id=purchase_response.contract_id,
+                requester_iaid="1-ff00:0:112",
+            )
+            # create a signature for the get contract request
+            with open(Path(__file__).parent.joinpath("data", "1-ff00_0_112.key"), "r") as f:
+                key = crypto.load_key(f.read()) # load private key
+            signature = sign_get_contract_request(
+                key,
+                request.requester_iaid,
+                request.contract_id,
+            )
+            request.requester_signature = signature
+            response = stub.GetContract(request)
+            print(f"deleteme test_get_contract, type(response) = {type(response)}")

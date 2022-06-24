@@ -63,3 +63,15 @@ def contract_fields_serialize_to_bytes(
     return b"order:" + purchase_order_bytes + \
         b"signature_buyer:" + buyer_signature + \
         b"timestamp:" + str(timestamp).encode("ascii")
+
+
+def get_contract_request_serialize(
+    contract_id: int,
+    requester_iaid: str,
+    signature: bytes,
+    ):
+    """ This ALSO serializes the signature """
+    if signature is None:
+        signature = b""
+    return b"contract_id:" + str(contract_id).encode("ascii") + b"signature:" + signature + \
+        b"requester_ia:" + requester_iaid.encode("ascii")

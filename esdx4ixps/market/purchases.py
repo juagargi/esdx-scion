@@ -58,3 +58,16 @@ def sign_purchase_order(
         int(starting_on.timestamp())
     )
     return crypto.signature_create(buyer_key, data)
+
+
+def sign_get_contract_request(
+    requester_key: rsa.RSAPrivateKey,
+    requester_iaid: str,
+    contract_id: int,
+    ):
+    data = serialize.get_contract_request_serialize(
+        contract_id,
+        requester_iaid,
+        b"",
+    )
+    return crypto.signature_create(requester_key, data)
