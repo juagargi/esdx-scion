@@ -61,7 +61,10 @@ class Client:
             offer.specs.reachable_paths,
             offer.specs.qos_class,
             offer.specs.price_per_unit,
-            offer.specs.bw_profile
+            offer.specs.bw_profile,
+            offer.specs.br_address,
+            offer.specs.br_mtu,
+            offer.specs.br_link_to,
         )
         data = serialize.purchase_order_fields_serialize_to_bytes(
             offerbytes,
@@ -156,6 +159,9 @@ def provider():
             qos_class=1,
             price_per_unit=0.000000001,
             bw_profile="2,2,2,2",
+            br_address="10.1.1.1:50000",
+            br_mtu=1500,
+            br_link_to="PARENT",
         )
         with open(Path(__file__).parent.joinpath("market", "tests", "data",
             "1-ff00_0_110.key"), "r") as f:

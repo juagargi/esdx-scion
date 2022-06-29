@@ -30,13 +30,16 @@ class OfferProtoSerializer(proto_serializers.ProtoSerializer):
     id = serializers.IntegerField()
     iaid = serializers.CharField(max_length=32)
     is_core = serializers.BooleanField()
-    signature = BinaryField()
     notbefore = serializers.DateTimeField()
     notafter = serializers.DateTimeField()
     reachable_paths = serializers.CharField()
     qos_class = serializers.IntegerField()
     price_per_unit = serializers.FloatField()  # TODO(juagargi) maybe DecimalField
     bw_profile = serializers.CharField()
+    br_address = serializers.CharField()
+    br_mtu = serializers.IntegerField()
+    br_link_to = serializers.CharField()
+    signature = BinaryField()
 
     embed_in_specs = [f.name for f in market_pb2.OfferSpecification().DESCRIPTOR.fields]
 
@@ -93,7 +96,10 @@ class OfferProtoSerializer(proto_serializers.ProtoSerializer):
             self.validated_data["reachable_paths"],
             self.validated_data["qos_class"],
             self.validated_data["price_per_unit"],
-            self.validated_data["bw_profile"]
+            self.validated_data["bw_profile"],
+            self.validated_data["br_address"],
+            self.validated_data["br_mtu"],
+            self.validated_data["br_link_to"],
         )
 
 
@@ -127,6 +133,9 @@ class ContractProtoSerializer(proto_serializers.ModelProtoSerializer):
                 qos_class=int(offer["qos_class"]),
                 price_per_unit=float(offer["price_per_unit"]),
                 bw_profile=offer["bw_profile"],
+                br_address=offer["br_address"],
+                br_mtu=int(offer["br_mtu"]),
+                br_link_to=offer["br_link_to"],
                 signature=base64.standard_b64decode(offer["signature"]),
             ),
             buyer_iaid=buyer["iaid"],

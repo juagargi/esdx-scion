@@ -1,5 +1,7 @@
+import ipaddress
 from django.db import models
 from django.core import validators
+from django.forms import ValidationError
 from django.utils.timezone import is_naive
 from django.db.models.signals import pre_save, pre_delete
 from django.dispatch import receiver
@@ -10,6 +12,8 @@ from market.models.broker import Broker
 from util.conversion import csv_to_intlist, ia_validator
 from util import crypto
 from util import serialize
+
+import re
 
 
 class OfferManager(models.Manager):
@@ -40,19 +44,34 @@ class Offer(models.Model):
     notbefore = models.DateTimeField()
     notafter = models.DateTimeField()  # the difference notafter - notbefore is len(bw_profile)
     # this will be a '\n' separated list of comma separated lists of ISD-AS#IF,IF sequences
-    reachable_paths = models.TextField()
-    qos_class = models.IntegerField()  # TRD
+    reachable_paths = models.TextField(blank=True)
+    qos_class = models.IntegerField()  # TBD
     # bw per period, e.g. 3,3,2,4,4 means 3 BW_STEP during the first BW_PERIOD, then 3, then 2, etc
     price_per_unit = models.FloatField()
     bw_profile = models.TextField(validators=[validators.int_list_validator()])
+    br_address  = models.TextField()
+    br_mtu = models.IntegerField(validators=[
+        validators.MinValueValidator(100),
+        validators.MaxValueValidator(65534)])
+    br_link_to = models.CharField(max_length=10, choices=[
+        ("CORE", "CORE"),
+        ("PARENT", "PARENT"),
+        ("PEER", "PEER"),
+    ])
     # when an offer is sold, "deprecates" points to the sold one, i.e. the old one
     deprecates = models.OneToOneField("Offer",
                                       null=True,
+                                      blank=True,
                                       on_delete=models.SET_NULL,
                                       related_name="deprecated_by")
 
     def _pre_save(self):
         """ Checks validity, profile length """
+        try:
+            self.full_clean()
+        except ValidationError as ex:
+            raise ValueError(ex) from ex
+
         if is_naive(self.notbefore) or is_naive(self.notafter):
             raise ValueError("naive (without timezone) datetime objects not supported")
         if self.notafter < self.notbefore:
@@ -67,6 +86,12 @@ class Offer(models.Model):
         if len(profile) != lifespan.total_seconds() // BW_PERIOD:
             raise ValueError(f"bw_profile should contain exactly "+
                              f"{lifespan.total_seconds() // BW_PERIOD} values; contains {len(profile)}")
+        # check the br_address is an IP:port
+        parts = re.search("(.*):(.*)", self.br_address).groups()
+        if len(parts) != 2 or int(parts[1]) <= 0 or int(parts[1]) > 65534:
+            raise ValueError(f"invalid address {self.br_address}")
+        addr = parts[0].strip("[]")
+        ipaddress.ip_address(addr)  # will raise ValueError if bad format
 
     def serialize_to_bytes(self):
         return serialize.offer_fields_serialize_to_bytes(
@@ -77,7 +102,10 @@ class Offer(models.Model):
             self.reachable_paths,
             self.qos_class,
             self.price_per_unit,
-            self.bw_profile
+            self.bw_profile,
+            self.br_address,
+            self.br_mtu,
+            self.br_link_to,
         )
 
     def validate_signature(self):

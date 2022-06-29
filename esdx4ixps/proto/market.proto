@@ -31,7 +31,10 @@ message OfferSpecification {
     int32 qos_class = 6;
     double price_per_unit = 7; // price of 600 * 1 Megabits (BW_PERIOD * BW_STEP)
     string bw_profile = 8;
-    bytes signature = 9; // the signature checks all the previous fields
+    string br_address = 9; // the address of the border router
+    int32 br_mtu = 10; // the mtu to use in the link
+    string br_link_to = 11; // the type of link: PARENT, CORE or PEER
+    bytes signature = 50; // the signature checks all the previous fields
 }
 
 message Offer {
