@@ -23,3 +23,16 @@ for pip to use:
 ```bash
 pip-compile --generate-hashes --allow-unsafe --output-file=requirements.txt requirements.in
 ```
+
+### Run tests
+Ensure you are in the directory containing the `manage.py` file.
+Then activate the virtual environment created above, if not active already
+```bash
+source .venv/bin/activate
+```
+
+And then run
+```bash
+make test
+make integration
+```
