@@ -22,23 +22,29 @@ class MarketService(Service):
     gRPC service that allows working with offers.
     """
     def ListOffers(self, request, context):
-        offers = Offer.objects.available()
-        serializer = OfferProtoSerializer(offers, many=True)
-        for offer in serializer.message:
-            yield offer
+        try:
+            offers = Offer.objects.available()
+            serializer = OfferProtoSerializer(offers, many=True)
+            for offer in serializer.message:
+                yield offer
+        except Exception as ex:
+            raise MarketServiceError(str(ex)) from ex
 
     def AddOffer(self, request, context):
-        grpc_offer = OfferProtoSerializer(message=market_pb2.Offer(specs=request))
-        grpc_offer.is_valid(raise_exception=True)
-        grpc_offer.validate_signature_from_seller()
-        grpc_offer.sign_with_broker()
-        saved = grpc_offer.save()
-        grpc_offer.message.id = saved.id
-        return grpc_offer.message
+        try:
+            grpc_offer = OfferProtoSerializer(message=market_pb2.Offer(specs=request))
+            grpc_offer.is_valid(raise_exception=True)
+            grpc_offer.validate_signature_from_seller()
+            grpc_offer.sign_with_broker()
+            saved = grpc_offer.save()
+            grpc_offer.message.id = saved.id
+            return grpc_offer.message
+        except Exception as ex:
+            raise MarketServiceError(str(ex)) from ex
 
     def Purchase(self, request, context):
-        response = market_pb2.PurchaseResponse()
         try:
+            response = market_pb2.PurchaseResponse()
             with transaction.atomic():
                 try:
                     offer = Offer.objects.get(id=request.offer_id)
@@ -56,14 +62,15 @@ class MarketService(Service):
                 except ValueError as ex:
                     response.message = str(ex)
                     return response
+            response.message = ""
+            response.contract_id = contract.id
+            response.new_offer_id = offer.id
+            return response
         except IntegrityError:
             response.message = "data was modified during the transaction"
             return response
-
-        response.message = ""
-        response.contract_id = contract.id
-        response.new_offer_id = offer.id
-        return response
+        except Exception as ex:
+            raise MarketServiceError(str(ex)) from ex
 
     def GetContract(self, request: market_pb2.GetContractRequest, context):
         try:
