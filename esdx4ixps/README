@@ -10,6 +10,7 @@ be reached using this offer).
 
 ### Install pip packages:
 ```bash
+rm -rf .venv
 python3 -m venv .venv
 echo '*' > .venv/.gitignore
 source .venv/bin/activate

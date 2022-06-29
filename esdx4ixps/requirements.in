@@ -6,5 +6,6 @@ djangorestframework
 grpcio
 grpcio-tools
 pip-tools
+pytest
 pyyaml
 tblib
