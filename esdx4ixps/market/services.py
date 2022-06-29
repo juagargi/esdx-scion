@@ -44,31 +44,20 @@ class MarketService(Service):
 
     def Purchase(self, request, context):
         try:
-            response = market_pb2.PurchaseResponse()
             with transaction.atomic():
-                try:
-                    offer = Offer.objects.get(id=request.offer_id)
-                except Offer.DoesNotExist:
-                    response.message = f"offer id {request.offer_id} not found"
-                    return response
+                offer = Offer.objects.get(id=request.offer_id)
                 starts_at = time_from_pb_timestamp(request.starting_on)
-
-                try:
-                    contract, offer = purchase_offer(offer,
-                                                    request.buyer_iaid,
-                                                    starts_at,
-                                                    request.bw_profile,
-                                                    request.signature)
-                except ValueError as ex:
-                    response.message = str(ex)
-                    return response
-            response.message = ""
-            response.contract_id = contract.id
-            response.new_offer_id = offer.id
-            return response
+                contract, offer = purchase_offer(
+                    offer,
+                    request.buyer_iaid,
+                    starts_at,
+                    request.bw_profile,
+                    request.signature,
+                )
+            serializer = ContractProtoSerializer(contract)
+            return serializer.message
         except IntegrityError:
-            response.message = "data was modified during the transaction"
-            return response
+            raise MarketServiceError("data was modified during the transaction")
         except Exception as ex:
             raise MarketServiceError(str(ex)) from ex
 

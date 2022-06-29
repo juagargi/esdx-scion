@@ -12,8 +12,10 @@ import "google/protobuf/timestamp.proto";
 
 service MarketController {
     rpc ListOffers(ListRequest) returns (stream Offer) {}
+    // TODO(juagargi) this should open a channel where the provider would get contracts
+    // everytime a new client buys something
     rpc AddOffer(OfferSpecification) returns (Offer) {}
-    rpc Purchase(PurchaseRequest) returns (PurchaseResponse) {}
+    rpc Purchase(PurchaseRequest) returns (Contract) {}
     rpc GetContract(GetContractRequest) returns (Contract) {}
 }
 
@@ -43,12 +45,6 @@ message PurchaseRequest {
     bytes signature = 3; // base64 encoded
     string bw_profile = 4;
     google.protobuf.Timestamp starting_on = 5;
-}
-
-message PurchaseResponse {
-    int64 contract_id = 1; // or zero if failed
-    int64 new_offer_id = 2;  // non zero if the purchase created a new Offer (splitting its BW profile)
-    string message = 3;
 }
 
 message Contract {

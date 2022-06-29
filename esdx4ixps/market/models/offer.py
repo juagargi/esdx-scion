@@ -45,6 +45,11 @@ class Offer(models.Model):
     # bw per period, e.g. 3,3,2,4,4 means 3 BW_STEP during the first BW_PERIOD, then 3, then 2, etc
     price_per_unit = models.FloatField()
     bw_profile = models.TextField(validators=[validators.int_list_validator()])
+    # when an offer is sold, "deprecates" points to the sold one, i.e. the old one
+    deprecates = models.OneToOneField("Offer",
+                                      null=True,
+                                      on_delete=models.SET_NULL,
+                                      related_name="deprecated_by")
 
     def _pre_save(self):
         """ Checks validity, profile length """

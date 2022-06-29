@@ -9,6 +9,8 @@ from market.models.contract import Contract
 from util import crypto
 from util import serialize
 
+import copy
+
 
 def purchase_offer(offer: Offer,
                    buyer_iaid: str,
@@ -25,7 +27,7 @@ def purchase_offer(offer: Offer,
         if new_profile is None:
             raise RuntimeError("offer does not contain the requested BW profile")
 
-        # create purchse order will already validate the signature:
+        # create purchase order will already validate the signature:
         purchase_order = PurchaseOrder.objects.create(
             offer_id=offer.id,
             buyer=buyer,
@@ -40,10 +42,12 @@ def purchase_offer(offer: Offer,
         contract.stamp_signature()
         contract.save()
         # create new offer
-        offer.id = None
-        offer.bw_profile = new_profile
-        offer.save()
-        return contract, offer
+        new_offer = copy.deepcopy(offer)
+        new_offer.id = None
+        new_offer.deprecates = offer
+        new_offer.bw_profile = new_profile
+        new_offer.save()
+        return contract, new_offer
 
 
 def sign_purchase_order(

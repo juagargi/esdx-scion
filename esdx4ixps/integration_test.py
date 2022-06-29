@@ -96,15 +96,20 @@ class Client:
             for _ in range(2):
                 offers = self._list()
                 time.sleep(self.wait)
-                response = self._buy(offers[0])
-                if response.contract_id > 0:
-                    print(f"Client with ID: {self.ia} got contract with ID: {response.contract_id}")
+                try:
+                    pb_contract = self._buy(offers[0])
+                    print(f"Client with ID: {self.ia} got contract with ID: {pb_contract.contract_id}")
                     break
-                print(f"Client with ID: {self.ia} could not buy: {response.message}")
-            if response.contract_id <= 0:
+                except grpc.RpcError as ex:
+                    print(f"Client with ID: {self.ia} could not buy: {ex.details()}")
+                    continue
+            if pb_contract is None :
                 print(f"Client with ID: {self.ia} too many attempts")
                 return 1
-            contract = self._get_contract(response.contract_id)
+            # unnecessary, but check the contract obtained independently
+            pb_contract2 = self._get_contract(pb_contract.contract_id)
+            if pb_contract.contract_signature != pb_contract2.contract_signature:
+                raise RuntimeError("contract from get_contract: signatures are different!")
             # send contract to the topology reloader
             # TODO(juagargi)
 

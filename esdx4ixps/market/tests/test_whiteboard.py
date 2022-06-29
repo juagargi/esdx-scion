@@ -1,3 +1,4 @@
+from nis import match
 from django.test import TestCase
 from django_grpc_framework.test import Channel
 from django.utils import timezone as tz
@@ -112,26 +113,24 @@ class TestWhiteboard(TestCase):
                 signature=signature,
                 bw_profile="2",
                 starting_on=Timestamp(seconds=int(starting_on.timestamp())))
-            response = stub.Purchase(request)
-            self.assertGreater(response.new_offer_id, 0, response.message)
-            self.assertGreater(response.contract_id, 0, response.message)
+            pb_contract = stub.Purchase(request)
             self.assertEqual(Offer.objects.available(id=matched_offer.id).count(), 0) # sold already
-            # new offer:
-            newoffer = Offer.objects.get_available(id=response.new_offer_id)
+            # there must be a new offer:
+            newoffer=Offer.objects.get(deprecates=matched_offer)
             self.assertEqual(newoffer.bw_profile, "0,2,2,2")
             self.assertEqual(newoffer.notbefore, matched_offer.notbefore)
             self.assertEqual(newoffer.notafter, matched_offer.notafter)
 
             # contract and purchase order:
-            contract = Contract.objects.get(id=response.contract_id)
+            contract = Contract.objects.get(id=pb_contract.contract_id)
             self.assertAlmostEqual(contract.timestamp, tz.localtime(), delta=tz.timedelta(seconds=1))
             order = contract.purchase_order
             self.assertEqual(order.buyer.iaid, request.buyer_iaid)
             self.assertEqual(order.bw_profile, request.bw_profile)
-            return response
+            return contract
 
     def test_get_contract(self):
-        purchase_response = self.test_purchase() # buys self.offers[0]
+        contract_id = self.test_purchase().id # buys self.offers[0]
         def get_contract_request(ia:str, contract_id: int) -> market_pb2.GetContractRequest:
             """create the get contract request"""
             # create a signature for the get contract request
@@ -152,21 +151,21 @@ class TestWhiteboard(TestCase):
             self.assertRaises(services.MarketServiceError, stub.GetContract,
                 get_contract_request(
                     ia="1-ff00:0:111",  # this IA shouldn't get the contract (not part of it)
-                    contract_id=purchase_response.contract_id,
+                    contract_id=contract_id,
                 )
             )
             response = stub.GetContract(get_contract_request(
                 ia="1-ff00:0:112",  # this IA is the buyer
-                contract_id=purchase_response.contract_id)
+                contract_id=contract_id)
             )
             response2 = stub.GetContract(get_contract_request(
                 ia="1-ff00:0:110",  # this IA is the seller
-                contract_id=purchase_response.contract_id)
+                contract_id=contract_id)
             )
             self.assertEqual(response, response2)  # same contract for buyer and seller
             # check values of the contract
-            contract = Contract.objects.get(id=purchase_response.contract_id)
-            self.assertEqual(response.contract_id, purchase_response.contract_id)
+            contract = Contract.objects.get(id=contract_id)
+            self.assertEqual(response.contract_id, contract_id)
             self.assertEqual(response.contract_timestamp,
                 conversion.pb_timestamp_from_time(contract.timestamp))
             self.assertEqual(response.contract_signature, contract.signature_broker)

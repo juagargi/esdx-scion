@@ -31,7 +31,7 @@ class MarketControllerStub(object):
         self.Purchase = channel.unary_unary(
                 '/market.MarketController/Purchase',
                 request_serializer=market__pb2.PurchaseRequest.SerializeToString,
-                response_deserializer=market__pb2.PurchaseResponse.FromString,
+                response_deserializer=market__pb2.Contract.FromString,
                 )
         self.GetContract = channel.unary_unary(
                 '/market.MarketController/GetContract',
@@ -54,7 +54,9 @@ class MarketControllerServicer(object):
         raise NotImplementedError('Method not implemented!')
 
     def AddOffer(self, request, context):
-        """Missing associated documentation comment in .proto file."""
+        """TODO(juagargi) this should open a channel where the provider would get contracts
+        everytime a new client buys something
+        """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
@@ -87,7 +89,7 @@ def add_MarketControllerServicer_to_server(servicer, server):
             'Purchase': grpc.unary_unary_rpc_method_handler(
                     servicer.Purchase,
                     request_deserializer=market__pb2.PurchaseRequest.FromString,
-                    response_serializer=market__pb2.PurchaseResponse.SerializeToString,
+                    response_serializer=market__pb2.Contract.SerializeToString,
             ),
             'GetContract': grpc.unary_unary_rpc_method_handler(
                     servicer.GetContract,
@@ -155,7 +157,7 @@ class MarketController(object):
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/market.MarketController/Purchase',
             market__pb2.PurchaseRequest.SerializeToString,
-            market__pb2.PurchaseResponse.FromString,
+            market__pb2.Contract.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
