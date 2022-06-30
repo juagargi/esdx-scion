@@ -19,9 +19,11 @@ def time_from_pb_timestamp(timestamp):
     t = tz.datetime.fromtimestamp(timestamp.seconds + timestamp.nanos / 1e9)
     return t.replace(tzinfo=pytz.utc)
 
+def pb_timestamp_from_seconds(s: int):
+    return Timestamp(seconds=s)
 
 def pb_timestamp_from_time(time):
-    return Timestamp(seconds=int(time.timestamp()))
+    return pb_timestamp_from_seconds(time.timestamp())
 
 
 def pb_timestamp_from_str(s: str):

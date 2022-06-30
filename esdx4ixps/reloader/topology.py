@@ -1,5 +1,7 @@
-from pathlib import Path
+from unicodedata import name
 from market_pb2 import Contract
+from pathlib import Path
+from typing import NamedTuple
 import json
 import os
 import time
@@ -11,6 +13,12 @@ import time
 
 class Topology:
     """ Represents the SCiON topology """
+
+    class TopoInfoFromContract(NamedTuple):
+        remote_ia: str
+        remote_underlay: str
+        mtu: int
+        link_to: str
 
     def __init__(self, topofile: Path):
         self.topofile = topofile
@@ -33,10 +41,31 @@ class Topology:
                 attempts += 1
                 time.sleep(self.sleep)
         if attempts >= self.attempts:
-            raise ex
+            raise RuntimeError(ex) from ex
 
     def _unlock(self):
-        os.remove(self.lockfile)
+        try:
+            os.remove(self.lockfile)
+        except FileNotFoundError as ex:
+            raise RuntimeError(ex) from ex
+
+    def _contract_as_seller(self, c: Contract) -> TopoInfoFromContract:
+        """ Returns the relevant info for the seller """
+        return Topology.TopoInfoFromContract(
+            remote_ia=c.buyer_iaid,
+            remote_underlay=c.offer.br_address,
+            mtu=c.offer.br_mtu,
+            link_to=c.offer.br_link_to,
+        )
+
+    def _contract_as_buyer(self, c: Contract) -> TopoInfoFromContract:
+        """ Returns the relevant info for the buyer """
+        return Topology.TopoInfoFromContract(
+            remote_ia=c.offer.iaid,
+            remote_underlay=c.offer.br_address,
+            mtu=c.offer.br_mtu,
+            link_to=c.offer.br_link_to,
+        )
 
     def activate(self, c: Contract):
         """
