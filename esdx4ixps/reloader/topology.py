@@ -1,7 +1,9 @@
+from collections import defaultdict
 from unicodedata import name
 from market_pb2 import Contract
 from pathlib import Path
 from typing import NamedTuple
+from util import conversion
 import json
 import os
 import time
@@ -26,7 +28,7 @@ class Topology:
         self.attempts = 10
         self.sleep = 0.1 # seconds
 
-    def _load_topo(self):
+    def _load_topo(self) -> dict:
         with open(self.topofile) as r:
             return json.load(r)
 
@@ -67,6 +69,102 @@ class Topology:
             link_to=c.offer.br_link_to,
         )
 
+    @staticmethod
+    def _find_lowest_free_id(ids):
+        ids = sorted(ids)
+        ret = 1
+        for id in ids:
+            if ret < id:
+                break
+            ret = id + 1
+        return ret
+
+    @staticmethod
+    def _generate_esdx_br_name(topo) -> str:
+        ia = topo["isd_as"]
+        ia = ia.replace(":", "_")
+        return f"br{ia}-1111"
+
+    @classmethod
+    def _find_avail_public_addr(cls, addrs: dict) -> str:
+        """
+        the same IP as the only one in the dict, and the smallest free port possible which
+        is bigger than the smaller of the ports in the list
+        """
+        if len(addrs) != 1:
+            raise RuntimeError(f"cannot determine the public address: expected one ip but got " + \
+                f"{len(addrs)} instead")
+        ip, ports = next(iter(addrs.items()))
+        ports = sorted(ports)
+        port = 65536 if len(ports) > 0 else 1
+        for p in ports:
+            if port < p:
+                break
+            port = p + 1
+
+        return conversion.ip_port_to_str(ip, port)
+
+    def _add_cotract_to_topo(self, topo: dict, info: TopoInfoFromContract):
+        """
+        The ESDX border router is one that ends in -1111. If none is found in the topology,
+        this function adds one, with internal address deduced from the internal address of
+        the other BRs. If there is more than one IP in the list of internal addresses,
+        it raises an exception. The port is the max(ports) + 1.
+        It also adds a new interface to the ESDX BR. The public address is again deduced from
+        the public addresses of the other interfaces of all border routers. If more than
+        one IP address exists in the list of public addresses, it raises an exception.
+        The port is the first integer greater than zero not in use by other interface.
+        """
+        # find the ESDX BR; create it if not there.
+        # The ESDX BR is the one that ends with -1111
+        esdx_br = None
+        internal_addrs = defaultdict(lambda: [])
+        public_addrs = defaultdict(lambda: [])
+        ifid_inuse = []
+        for k, v in topo["border_routers"].items():
+            # add its interface IDs to the list
+            ifid_inuse.extend([int(k) for k in v["interfaces"].keys()])
+            # add its public addresses to the list
+            addrs = [interface["underlay"]["public"] for interface in v["interfaces"].values()]
+            for a in addrs:
+                ip, port = conversion.ip_port_from_str(a)
+                public_addrs[ip].append(port)
+            # is this the ESDX router?
+            if k.endswith("-1111"):
+                esdx_br = v
+                break
+            # collect its internal address
+            ip, port = conversion.ip_port_from_str(v["internal_addr"])
+            internal_addrs[ip].append(port)
+        if esdx_br is None:
+            # not found, add one. Use a similar address to those found in the topology
+            # TODO(juagargi) allow to configure the internal and control addresses
+            if len(internal_addrs) != 1:
+                raise RuntimeError("cannot automatically create a new border router: " + \
+                    "collected more than one internal address ip and don't know which " + \
+                    f"one to use (collected {[str(a) for a in internal_addrs.keys()]})")
+            ip, ports = next(iter(internal_addrs.items()))
+            port = max(ports) + 1
+            esdx_br = {
+                "internal_addr": conversion.ip_port_to_str(ip, port),
+                "interfaces": defaultdict(lambda: []),
+            }
+
+            topo["border_routers"][self._generate_esdx_br_name(topo)] = esdx_br
+        # add a new interface with the values from "info"
+        ifid = self._find_lowest_free_id(ifid_inuse)
+        public_addr = self._find_avail_public_addr(public_addrs)
+        esdx_br["interfaces"][str(ifid)] = {
+            "underlay": {
+                "public": public_addr,
+                "remote": info.remote_underlay,
+            },
+            "isd_as": info.remote_ia,
+            "mtu": info.mtu,
+            "link_to": info.link_to,
+        }
+
+    # TODO(juagargi) this should be used as context manager to prevent locks from ever not being deleted
     def activate(self, c: Contract):
         """
         Creates a new topology based on the existing topology and the contract.
@@ -78,7 +176,17 @@ class Topology:
         self._lock()
         # read topology
         topo = self._load_topo()
+        # find out if we are the seller or the buyer
+        if topo["isd_as"] == c.offer.iaid:
+            seller=True
+        elif topo["isd_as"] == c.buyer_iaid:
+            seller=False
+        else:
+            raise RuntimeError(f"bad contract: topology indicates local AS is {topo['isd_as']}, "+\
+                "and contract has seller={c.offer.iaid} and buyer={c.buyer_iaid}")
         # add contract
+        info = self._contract_as_seller(c) if seller else self._contract_as_buyer(c)
+        self._add_cotract_to_topo(topo, info)
         # write topology
         with open(self.topofile, "w") as w:
             raw = json.dumps(topo, indent=2) + "\n"
@@ -86,5 +194,8 @@ class Topology:
         # remove lock file
         self._unlock()
 
-    def deactivate(c: Contract):
+    def deactivate(self, c: Contract):
+        # find interface
+        # remove interface
+        # remove esdx BR if empty
         pass

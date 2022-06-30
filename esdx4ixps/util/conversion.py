@@ -100,3 +100,7 @@ def ip_port_from_str(s: str) -> Tuple[Union[IPv4Address, IPv6Address], int]:
             raise ValueError(f"invalid address {s}") # missing []
         ip = IPv6Address(addr)
     return (ip, port)
+
+def ip_port_to_str(ip: Union[IPv4Address,IPv6Address], port: int) -> str:
+    ip = f"[{ip}]" if ip.version == 6 else f"{ip}"
+    return f"{ip}:{port}"
