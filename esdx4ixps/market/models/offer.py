@@ -1,4 +1,3 @@
-import ipaddress
 from django.db import models
 from django.core import validators
 from django.forms import ValidationError
@@ -10,10 +9,9 @@ from datetime import datetime
 
 from market.models.broker import Broker
 from util.conversion import csv_to_intlist, ia_validator
+from util import conversion
 from util import crypto
 from util import serialize
-
-import re
 
 
 class OfferManager(models.Manager):
@@ -87,11 +85,7 @@ class Offer(models.Model):
             raise ValueError(f"bw_profile should contain exactly "+
                              f"{lifespan.total_seconds() // BW_PERIOD} values; contains {len(profile)}")
         # check the br_address is an IP:port
-        parts = re.search("(.*):(.*)", self.br_address).groups()
-        if len(parts) != 2 or int(parts[1]) <= 0 or int(parts[1]) > 65534:
-            raise ValueError(f"invalid address {self.br_address}")
-        addr = parts[0].strip("[]")
-        ipaddress.ip_address(addr)  # will raise ValueError if bad format
+        conversion.ip_port_from_str(self.br_address) # will raise ValueError if bad format
 
     def serialize_to_bytes(self):
         return serialize.offer_fields_serialize_to_bytes(

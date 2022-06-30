@@ -3,14 +3,19 @@
 protobuf:
 	@./tools/make_protobuf.sh
 
-test: test_market test_reloader
+test: test_market test_reloader test_util
 
 test_market:
 	@./manage.py test --parallel -v 0 market
 
 test_reloader:
 	@# @python -m pytest -q ./reloader/tests/test_*.py
-	@pytest -q ./reloader/ $(args)  # e.g. call `make test_reloader args=-s` to display the output
+	@# call e.g. `make test_reloader args=-s` to display the output
+	@pytest -q ./reloader/ $(args)
+
+test_util:
+	@# call e.g. `make test_util args=-s` to display the output
+	@pytest -q ./util/ $(args)
 
 integration:
 	@./tools/integration_tests.sh

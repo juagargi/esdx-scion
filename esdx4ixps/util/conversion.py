@@ -1,9 +1,11 @@
-from typing import List
+from ipaddress import IPv4Address, IPv6Address, AddressValueError, NetmaskValueError
 from django.utils import timezone as tz
 from django.utils import dateparse
 from django.core.exceptions import ValidationError
 from google.protobuf.timestamp_pb2 import Timestamp
+from typing import List, Tuple, Union
 import pytz
+import re
 
 
 def csv_to_intlist(csv: str) -> List[int]:
@@ -23,7 +25,7 @@ def pb_timestamp_from_seconds(s: int):
     return Timestamp(seconds=s)
 
 def pb_timestamp_from_time(time):
-    return pb_timestamp_from_seconds(time.timestamp())
+    return pb_timestamp_from_seconds(int(time.timestamp()))
 
 
 def pb_timestamp_from_str(s: str):
@@ -79,3 +81,22 @@ def _ia_validator(ia: str):
 def ia_validator():
     """ returns a validator that validates IA of the form 1-ff00:0:111 """
     return _ia_validator
+
+
+def ip_port_from_str(s: str) -> Tuple[Union[IPv4Address, IPv6Address], int]:
+    try:
+        parts = re.search("(.*):(.*)", s).groups()
+        port = int(parts[1])
+    except Exception as ex:
+        raise ValueError(f"invalid address {s}") from ex
+    if len(parts) != 2 or port < 0 or port > 65534:
+        raise ValueError(f"invalid address {s}")
+    # address must be IPv4, or [IPv6]
+    try:
+        ip = IPv4Address(parts[0])
+    except (AddressValueError, NetmaskValueError):
+        addr = parts[0].strip("[]")
+        if addr == parts[0]:
+            raise ValueError(f"invalid address {s}") # missing []
+        ip = IPv6Address(addr)
+    return (ip, port)
