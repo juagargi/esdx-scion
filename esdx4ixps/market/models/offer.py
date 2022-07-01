@@ -16,6 +16,10 @@ from util import serialize
 
 
 class OfferManager(models.Manager):
+    def _original_offers(self, *args, **kwargs):
+        """returns those original offers signed by the sellers"""
+        return self.filter(deprecated_by__isnull=False, purchase_order=None, *args, **kwargs)
+
     def available(self, *args, **kwargs):
         return self.filter(deprecated_by=None, *args, **kwargs)
 

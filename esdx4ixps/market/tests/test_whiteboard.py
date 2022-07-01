@@ -70,6 +70,7 @@ class TestWhiteboard(TestCase):
                 self.assertEqual(got, expected)
 
     def test_add(self):
+        available_offers = list(Offer.objects.available())
         with Channel() as channel:
             stub = market_pb2_grpc.MarketControllerStub(channel)
             notbefore = tz.datetime.fromisoformat("2022-04-01T20:00:00.000000+00:00")
@@ -101,19 +102,29 @@ class TestWhiteboard(TestCase):
             # get the created offer
             saved = Offer.objects.get(id=saved_offer.id)
             # check original specs
-            self.assertEqual(specs.iaid, saved.iaid)
-            self.assertEqual(specs.is_core, saved.is_core)
-            self.assertEqual(specs.notbefore, conversion.pb_timestamp_from_time(saved.notbefore))
-            self.assertEqual(specs.notafter, conversion.pb_timestamp_from_time(saved.notafter))
-            self.assertEqual(specs.reachable_paths, saved.reachable_paths)
-            self.assertEqual(specs.qos_class, saved.qos_class)
-            self.assertEqual(specs.price_per_unit, saved.price_per_unit)
-            self.assertEqual(specs.bw_profile, saved.bw_profile)
-            self.assertEqual(specs.br_address, saved.br_address)
-            self.assertEqual(specs.br_mtu, saved.br_mtu)
-            self.assertEqual(specs.br_link_to, saved.br_link_to)
+            def compare_offer(o):
+                self.assertEqual(specs.iaid, o.iaid)
+                self.assertEqual(specs.is_core, o.is_core)
+                self.assertEqual(specs.notbefore, conversion.pb_timestamp_from_time(o.notbefore))
+                self.assertEqual(specs.notafter, conversion.pb_timestamp_from_time(o.notafter))
+                self.assertEqual(specs.reachable_paths, o.reachable_paths)
+                self.assertEqual(specs.qos_class, o.qos_class)
+                self.assertEqual(specs.price_per_unit, o.price_per_unit)
+                self.assertEqual(specs.bw_profile, o.bw_profile)
+                self.assertEqual(specs.br_address, o.br_address)
+                self.assertEqual(specs.br_mtu, o.br_mtu)
+                self.assertEqual(specs.br_link_to, o.br_link_to)
+            compare_offer(saved)
             # verify it's signed by the broker
             saved.validate_signature()
+            # the count of available offers has changed only by 1
+            available_now = Offer.objects.available()
+            self.assertEqual(len(available_now), len(available_offers) + 1)
+            # and I can find the original offer signed by the seller
+            originals = Offer.objects._original_offers()
+            self.assertEqual(len(originals), 1)
+            compare_offer(originals[0])
+            self.assertEqual(originals[0].signature, specs.signature)
 
     def test_purchase(self):
         with Channel() as channel:
