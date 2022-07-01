@@ -95,9 +95,23 @@ class TestWhiteboard(TestCase):
             specs.signature = crypto.signature_create(key, data)
             # call RPC
             saved_offer = stub.AddOffer(specs)
-            self.assertEqual(Offer.objects.all().count(), len(self.offers)+1)
+            # check that both offers (the original signed by the seller, and the current signed by
+            # the broker) are present in the DB
+            self.assertEqual(Offer.objects.all().count(), len(self.offers)+2)
             # get the created offer
             saved = Offer.objects.get(id=saved_offer.id)
+            # check original specs
+            self.assertEqual(specs.iaid, saved.iaid)
+            self.assertEqual(specs.is_core, saved.is_core)
+            self.assertEqual(specs.notbefore, conversion.pb_timestamp_from_time(saved.notbefore))
+            self.assertEqual(specs.notafter, conversion.pb_timestamp_from_time(saved.notafter))
+            self.assertEqual(specs.reachable_paths, saved.reachable_paths)
+            self.assertEqual(specs.qos_class, saved.qos_class)
+            self.assertEqual(specs.price_per_unit, saved.price_per_unit)
+            self.assertEqual(specs.bw_profile, saved.bw_profile)
+            self.assertEqual(specs.br_address, saved.br_address)
+            self.assertEqual(specs.br_mtu, saved.br_mtu)
+            self.assertEqual(specs.br_link_to, saved.br_link_to)
             # verify it's signed by the broker
             saved.validate_signature()
 

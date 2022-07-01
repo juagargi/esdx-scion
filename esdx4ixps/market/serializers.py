@@ -64,28 +64,8 @@ class OfferProtoSerializer(proto_serializers.ProtoSerializer):
         return super().data_to_message(d)
 
     def create(self, values):
-        return Offer.objects.create(**values)
-
-    def validate_signature_from_seller(self):
-        # find seller
-        seller = AS.objects.get(iaid=self.validated_data["iaid"])
-        # get cert
-        cert = crypto.load_certificate(seller.certificate_pem)
-        # serialize fields
-        data = self.serialize_to_bytes()
-        # validate signature
-        signature = self.validated_data['signature']
-        crypto.signature_validate(cert, signature, data)
-
-    def sign_with_broker(self):
-        # serialize fields
-        data = self.serialize_to_bytes()
-        # get key from broker
-        broker = Broker.objects.get()
-        key = crypto.load_key(broker.key_pem)
-        # sign
-        signature = crypto.signature_create(key, data)
-        self.validated_data["signature"] = signature
+        """only creates an instance, not a record in the DB"""
+        return Offer(**values)
 
     def serialize_to_bytes(self) -> bytes:
         return serialize.offer_fields_serialize_to_bytes(

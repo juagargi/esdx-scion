@@ -7,6 +7,7 @@ from django.dispatch import receiver
 from defs import BW_PERIOD
 from datetime import datetime
 
+from market.models.ases import AS
 from market.models.broker import Broker
 from util.conversion import csv_to_intlist, ia_validator
 from util import conversion
@@ -102,6 +103,15 @@ class Offer(models.Model):
             self.br_link_to,
         )
 
+    def validate_signature_from_seller(self):
+        """ validates that the offer originally came from the seller """
+        # serialize to bytes
+        data = self.serialize_to_bytes()
+        # get seller cert
+        cert = crypto.load_certificate(AS.objects.get(iaid=self.iaid).certificate_pem)
+        # validate signature
+        crypto.signature_validate(cert, self.signature, data)
+
     def validate_signature(self):
         # serialize to bytes
         data = self.serialize_to_bytes()
@@ -109,6 +119,15 @@ class Offer(models.Model):
         cert = crypto.load_certificate(Broker.objects.get().certificate_pem)
         # validate signature
         crypto.signature_validate(cert, self.signature, data)
+
+    def sign_with_broker(self):
+        """ replaces the signature with one from the broker """
+        # serialize to bytes
+        data = self.serialize_to_bytes()
+        # get key from broker
+        key = crypto.load_key(Broker.objects.get().key_pem)
+        # sign
+        self.signature = crypto.signature_create(key, data)
 
     def contains_profile(self, bw_profile: str, starting: datetime) -> bool:
         return self.purchase(bw_profile, starting) != None

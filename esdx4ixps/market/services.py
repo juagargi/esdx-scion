@@ -9,6 +9,7 @@ from util.conversion import time_from_pb_timestamp
 from util import crypto
 from util import serialize
 
+import copy
 import market_pb2
 import grpc
 
@@ -30,15 +31,23 @@ class MarketService(Service):
         except Exception as ex:
             raise MarketServiceError(str(ex)) from ex
 
-    def AddOffer(self, request, context):
+    def AddOffer(self, request: market_pb2.OfferSpecification, context):
         try:
             grpc_offer = OfferProtoSerializer(message=market_pb2.Offer(specs=request))
             grpc_offer.is_valid(raise_exception=True)
-            grpc_offer.validate_signature_from_seller()
-            grpc_offer.sign_with_broker()
-            saved = grpc_offer.save()
-            grpc_offer.message.id = saved.id
-            return grpc_offer.message
+            with transaction.atomic():
+                offer = grpc_offer.save() # only creates an instance without saving it to the DB
+                offer.validate_signature_from_seller()
+                offer.save() # store the original offer
+                new_offer = copy.deepcopy(offer)
+                new_offer.id = None
+                new_offer.deprecates = offer
+                new_offer.sign_with_broker()
+                new_offer.save()
+                return OfferProtoSerializer(new_offer).message
+        except IntegrityError:
+            # should never happen
+            raise MarketServiceError("data was modified during the transaction")
         except Exception as ex:
             raise MarketServiceError(str(ex)) from ex
 
