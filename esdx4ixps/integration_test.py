@@ -38,6 +38,7 @@ class Client:
         self.ia = ia
         self.wait = wait_seconds
         self.key = None
+        self.broker_cert = None
         self.stub = None
 
     def _list(self):
@@ -45,7 +46,11 @@ class Client:
         offers = [o for o in response]
         return offers
 
-    def _buy(self, offer):
+    def _buy(self, offer: market_pb2.Offer):
+        # verify broker's signature
+        offerbytes = serialize.offer_specification_serialize_to_bytes(offer.specs)
+        crypto.signature_validate(self.broker_cert, offer.specs.signature, offerbytes)
+
         request = market_pb2.PurchaseRequest(
             offer_id=offer.id,
             buyer_iaid=self.ia,
@@ -53,19 +58,6 @@ class Client:
             bw_profile="1,1,1,1",
             starting_on=pb_timestamp_from_time(tz.datetime.fromisoformat("2022-04-01T20:00:00.000000+00:00")))
         # sign the purchase request
-        offerbytes = serialize.offer_fields_serialize_to_bytes(
-            offer.specs.iaid,
-            offer.specs.is_core,
-            offer.specs.notbefore.ToSeconds(),
-            offer.specs.notafter.ToSeconds(),
-            offer.specs.reachable_paths,
-            offer.specs.qos_class,
-            offer.specs.price_per_unit,
-            offer.specs.bw_profile,
-            offer.specs.br_address,
-            offer.specs.br_mtu,
-            offer.specs.br_link_to,
-        )
         data = serialize.purchase_order_fields_serialize_to_bytes(
             offerbytes,
             request.bw_profile,
@@ -93,6 +85,10 @@ class Client:
         with open(Path(__file__).parent.joinpath("market", "tests",\
             "data", iafile + ".key"), "r") as f:
             self.key = crypto.load_key(f.read())
+        # load broker's certificate
+        with open(Path(__file__).parent.joinpath("market", "tests",\
+            "data", "broker.crt"), "r") as f:
+            self.broker_cert = crypto.load_certificate(f.read())
         # buy
         with grpc.insecure_channel('localhost:50051') as channel:
             self.stub = market_pb2_grpc.MarketControllerStub(channel)

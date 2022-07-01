@@ -46,6 +46,7 @@ def purchase_offer(offer: Offer,
         new_offer.id = None
         new_offer.deprecates = offer
         new_offer.bw_profile = new_profile
+        new_offer.sign_with_broker()
         new_offer.save()
         return contract, new_offer
 
