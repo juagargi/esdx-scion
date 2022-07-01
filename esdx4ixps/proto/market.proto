@@ -31,7 +31,7 @@ message OfferSpecification {
     int32 qos_class = 6;
     double price_per_unit = 7; // price of 600 * 1 Megabits (BW_PERIOD * BW_STEP)
     string bw_profile = 8;
-    string br_address = 9; // the address of the border router
+    string br_address_template = 9; // e.g. 1.1.1.1:50-100 (use 1.1.1.1, ports from 50 to 100)
     int32 br_mtu = 10; // the mtu to use in the link
     string br_link_to = 11; // the type of link: PARENT, CORE or PEER
     bytes signature = 50; // the signature checks all the previous fields
@@ -57,6 +57,7 @@ message Contract {
     bytes contract_signature = 3;
     // details about the offer:
     OfferSpecification offer = 10;
+    string br_address = 11;
     // details about the buyer
     string buyer_iaid = 50;
     google.protobuf.Timestamp buyer_starting_on = 51;

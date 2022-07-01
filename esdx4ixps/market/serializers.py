@@ -36,7 +36,7 @@ class OfferProtoSerializer(proto_serializers.ProtoSerializer):
     qos_class = serializers.IntegerField()
     price_per_unit = serializers.FloatField()  # TODO(juagargi) maybe DecimalField
     bw_profile = serializers.CharField()
-    br_address = serializers.CharField()
+    br_address_template = serializers.CharField()
     br_mtu = serializers.IntegerField()
     br_link_to = serializers.CharField()
     signature = BinaryField()
@@ -77,7 +77,7 @@ class OfferProtoSerializer(proto_serializers.ProtoSerializer):
             self.validated_data["qos_class"],
             self.validated_data["price_per_unit"],
             self.validated_data["bw_profile"],
-            self.validated_data["br_address"],
+            self.validated_data["br_address_template"],
             self.validated_data["br_mtu"],
             self.validated_data["br_link_to"],
         )
@@ -113,7 +113,7 @@ class ContractProtoSerializer(proto_serializers.ModelProtoSerializer):
                 qos_class=int(offer["qos_class"]),
                 price_per_unit=float(offer["price_per_unit"]),
                 bw_profile=offer["bw_profile"],
-                br_address=offer["br_address"],
+                br_address_template=offer["br_address_template"],
                 br_mtu=int(offer["br_mtu"]),
                 br_link_to=offer["br_link_to"],
                 signature=base64.standard_b64decode(offer["signature"]),

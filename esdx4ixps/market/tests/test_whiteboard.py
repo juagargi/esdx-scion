@@ -32,7 +32,7 @@ class TestWhiteboard(TestCase):
                 qos_class=1,
                 price_per_unit=0.000000001,
                 bw_profile="2,2,2,2",
-                br_address="10.1.1.1:50000",
+                br_address_template="10.1.1.1:50000-50010",
                 br_mtu=1500,
                 br_link_to="PARENT",
             )
@@ -49,7 +49,7 @@ class TestWhiteboard(TestCase):
         self.assertEqual(offer.qos_class, msg.specs.qos_class)
         self.assertEqual(offer.price_per_unit, msg.specs.price_per_unit)
         self.assertEqual(offer.bw_profile, msg.specs.bw_profile)
-        self.assertEqual(offer.br_address, msg.specs.br_address)
+        self.assertEqual(offer.br_address_template, msg.specs.br_address_template)
         self.assertEqual(offer.br_mtu, msg.specs.br_mtu)
         self.assertEqual(offer.br_link_to, msg.specs.br_link_to)
         self.assertEqual(offer.signature, msg.specs.signature)
@@ -84,7 +84,7 @@ class TestWhiteboard(TestCase):
                 qos_class=1,
                 price_per_unit=0.000000123,
                 bw_profile="2,2,2,2",
-                br_address="1.1.1.1:1",
+                br_address_template="1.1.1.1:1-10",
                 br_mtu=100,
                 br_link_to="PARENT",
             )
@@ -111,7 +111,7 @@ class TestWhiteboard(TestCase):
                 self.assertEqual(specs.qos_class, o.qos_class)
                 self.assertEqual(specs.price_per_unit, o.price_per_unit)
                 self.assertEqual(specs.bw_profile, o.bw_profile)
-                self.assertEqual(specs.br_address, o.br_address)
+                self.assertEqual(specs.br_address_template, o.br_address_template)
                 self.assertEqual(specs.br_mtu, o.br_mtu)
                 self.assertEqual(specs.br_link_to, o.br_link_to)
             compare_offer(saved)
@@ -219,7 +219,7 @@ class TestWhiteboard(TestCase):
             self.assertEqual(o.qos_class, po.offer.qos_class)
             self.assertEqual(o.price_per_unit, po.offer.price_per_unit)
             self.assertEqual(o.bw_profile, po.offer.bw_profile)
-            self.assertEqual(o.br_address, po.offer.br_address)
+            self.assertEqual(o.br_address_template, po.offer.br_address_template)
             self.assertEqual(o.br_mtu, po.offer.br_mtu)
             self.assertEqual(o.br_link_to, po.offer.br_link_to)
             self.assertEqual(o.signature, po.offer.signature)

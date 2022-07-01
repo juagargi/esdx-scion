@@ -83,15 +83,14 @@ def ia_validator():
     return _ia_validator
 
 
-def ip_port_from_str(s: str) -> Tuple[Union[IPv4Address, IPv6Address], int]:
+def _ip_and_string_from_str(s:str) -> Tuple[Union[IPv4Address, IPv6Address], str]:
     try:
         parts = re.search("(.*):(.*)", s).groups()
-        port = int(parts[1])
     except Exception as ex:
         raise ValueError(f"invalid address {s}") from ex
-    if len(parts) != 2 or port < 0 or port > 65534:
+    if len(parts) != 2:
         raise ValueError(f"invalid address {s}")
-    # address must be IPv4, or [IPv6]
+    # IP address must be written as IPv4 or [IPv6]
     try:
         ip = IPv4Address(parts[0])
     except (AddressValueError, NetmaskValueError):
@@ -99,7 +98,25 @@ def ip_port_from_str(s: str) -> Tuple[Union[IPv4Address, IPv6Address], int]:
         if addr == parts[0]:
             raise ValueError(f"invalid address {s}") # missing []
         ip = IPv6Address(addr)
+    return ip, parts[1]
+
+def ip_port_from_str(s: str) -> Tuple[Union[IPv4Address, IPv6Address], int]:
+    ip, port = _ip_and_string_from_str(s)
+    port = int(port)
+    if port < 0 or port > 65534:
+        raise ValueError(f"invalid address {s}")
     return (ip, port)
+
+def ip_port_range_from_str(s: str) -> Tuple[Union[IPv4Address, IPv6Address], int, int]:
+    """ returns the IP, the min port and the max port """
+    ip, port_range = _ip_and_string_from_str(s)
+    port_range = port_range.split("-")
+    if len(port_range) != 2:
+        raise ValueError(f"invalid port range in {s}")
+    [min, max] = sorted([int(port_range[0]), int(port_range[1])])
+    if max > 65534:
+        raise ValueError(f"invalid port range in {s} (max out of range)")
+    return ip, min, max
 
 def ip_port_to_str(ip: Union[IPv4Address,IPv6Address], port: int) -> str:
     ip = f"[{ip}]" if ip.version == 6 else f"{ip}"

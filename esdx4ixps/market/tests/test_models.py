@@ -21,7 +21,7 @@ class TestOffer(TestCase):
                                     qos_class=1,
                                     price_per_unit=0.000001,
                                     bw_profile=profile,
-                                    br_address="10.1.1.1:50000",
+                                    br_address_template="10.1.1.1:50000-50010",
                                     br_mtu=1500,
                                     br_link_to="PARENT")
 
@@ -48,16 +48,16 @@ class TestOffer(TestCase):
             ValueError,
             o.save
         )
-        # bad br_address
+        # bad br_address_template
         o = self._create_offer(3)
-        o.br_address = "X.X.X.X:12"
+        o.br_address_template = "1.1.1.1:12"
         self.assertRaises(
             ValueError,
             o.save
         )
-        # okay IPv6 br_address
+        # okay IPv6 br_address_template
         o = self._create_offer(3)
-        o.br_address = "[fd00:f00d:cafe::7f00:9]:31018"
+        o.br_address_template = "[fd00:f00d:cafe::7f00:9]:31018-31020"
         o.save()
         # bad br_mtu
         o = self._create_offer(3)
@@ -167,11 +167,11 @@ class TestOffer(TestCase):
             1,
             100,
             "2,2,2,2",
-            "1.1.1.1:42",
+            "1.1.1.1:42-45",
             1500,
             "PARENT")
         self.assertEqual(("ia:1-ff00:0:11111112reachable:path1,path21100profile:2,2,2,2"+\
-            "br_address:1.1.1.1:42br_mtu:1500br_link_to:PARENT").encode("ascii"), b)
+            "br_address_template:1.1.1.1:42-45br_mtu:1500br_link_to:PARENT").encode("ascii"), b)
 
 
 class TestAS(TestCase):

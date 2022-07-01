@@ -52,7 +52,7 @@ class Offer(models.Model):
     # bw per period, e.g. 3,3,2,4,4 means 3 BW_STEP during the first BW_PERIOD, then 3, then 2, etc
     price_per_unit = models.FloatField()
     bw_profile = models.TextField(validators=[validators.int_list_validator()])
-    br_address  = models.TextField()
+    br_address_template  = models.TextField()
     br_mtu = models.IntegerField(validators=[
         validators.MinValueValidator(100),
         validators.MaxValueValidator(65534)])
@@ -89,8 +89,8 @@ class Offer(models.Model):
         if len(profile) != lifespan.total_seconds() // BW_PERIOD:
             raise ValueError(f"bw_profile should contain exactly "+
                              f"{lifespan.total_seconds() // BW_PERIOD} values; contains {len(profile)}")
-        # check the br_address is an IP:port
-        conversion.ip_port_from_str(self.br_address) # will raise ValueError if bad format
+        # check the br_address_template is an IP:port-port
+        conversion.ip_port_range_from_str(self.br_address_template) # will raise ValueError if bad format
 
     def serialize_to_bytes(self):
         return serialize.offer_fields_serialize_to_bytes(
@@ -102,7 +102,7 @@ class Offer(models.Model):
             self.qos_class,
             self.price_per_unit,
             self.bw_profile,
-            self.br_address,
+            self.br_address_template,
             self.br_mtu,
             self.br_link_to,
         )
