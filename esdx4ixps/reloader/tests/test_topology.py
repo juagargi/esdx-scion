@@ -478,9 +478,47 @@ class TestTopology(TestCase):
             # load the json and check that our contract is inside
             with open(Path(temp, "topo.json")) as f:
                 topo = json.load(f)
-                self.assertIn("br1-ff00_0_111-1111", topo["border_routers"])
-                br = topo["border_routers"]["br1-ff00_0_111-1111"]
-                self.assertIn("1", br["interfaces"])
-                iface = br["interfaces"]["1"]
-                self.assertEqual(iface["isd_as"], c.offer.iaid)
-                self.assertEqual(iface["underlay"]["remote"], c.offer.br_address)
+        self.assertIn("br1-ff00_0_111-1111", topo["border_routers"])
+        br = topo["border_routers"]["br1-ff00_0_111-1111"]
+        self.assertIn("1", br["interfaces"])
+        iface = br["interfaces"]["1"]
+        self.assertEqual(iface["isd_as"], c.offer.iaid)
+        self.assertEqual(iface["underlay"]["remote"], c.offer.br_address)
+
+    def test_deactivate(self):
+        with TemporaryDirectory() as temp:
+            shutil.copyfile(Path(DATADIR, "topo.json"), Path(temp, "topo.json"))
+            c1 = self._mock_contract()
+            # r = Topology(Path(DATADIR, "topo.json"))
+            r = Topology(Path(temp, "topo.json"))
+            r.activate(c1)
+            # activate another contract:
+            c2 = self._mock_contract()
+            c2.offer.br_address = "1.1.1.1:50001"
+            r.activate(c2)
+            # load the json with the two esdx interfaces
+            with open(Path(temp, "topo.json")) as f:
+                topo = json.load(f)
+            self.assertIn("br1-ff00_0_111-1111", topo["border_routers"])
+            br = topo["border_routers"]["br1-ff00_0_111-1111"]
+            self.assertEqual(len(br["interfaces"]), 2)
+            self.assertIn("1", br["interfaces"]) # with port 50000
+            self.assertEqual(br["interfaces"]["1"]["underlay"]["remote"], "1.1.1.1:50000")
+            self.assertIn("2", br["interfaces"]) # with port 50001
+            self.assertEqual(br["interfaces"]["2"]["underlay"]["remote"], "1.1.1.1:50001")
+
+            # remove the last added esdx interface
+            r.deactivate(c2)
+            with open(Path(temp, "topo.json")) as f:
+                topo = json.load(f)
+            self.assertIn("br1-ff00_0_111-1111", topo["border_routers"])
+            br = topo["border_routers"]["br1-ff00_0_111-1111"]
+            self.assertEqual(len(br["interfaces"]), 1)
+            self.assertIn("1", br["interfaces"]) # with port 50000
+            self.assertEqual(br["interfaces"]["1"]["underlay"]["remote"], "1.1.1.1:50000")
+
+            # remove the first added esdx interface
+            r.deactivate(c1)
+            with open(Path(temp, "topo.json")) as f:
+                topo = json.load(f)
+            self.assertNotIn("br1-ff00_0_111-1111", topo["border_routers"])

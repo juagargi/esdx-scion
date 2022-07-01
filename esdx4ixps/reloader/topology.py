@@ -224,8 +224,8 @@ class Topology:
         info = self._contract_info(topo, c)
         self._remove_interface(topo, info)
 
-        # # write topology
-        # with open(self.topofile, "w") as w:
-        #     raw = json.dumps(topo, indent=2) + "\n"
-        #     w.write(raw)
+        # write topology
+        with open(self.topofile, "w") as w:
+            raw = json.dumps(topo, indent=2) + "\n"
+            w.write(raw)
         self._unlock()
