@@ -69,6 +69,17 @@ class Topology:
             link_to=c.offer.br_link_to,
         )
 
+    def _contract_info(self, topo: dict, c: Contract) -> TopoInfoFromContract:
+        # find out if we are the seller or the buyer
+        if topo["isd_as"] == c.offer.iaid:
+            seller=True
+        elif topo["isd_as"] == c.buyer_iaid:
+            seller=False
+        else:
+            raise RuntimeError(f"bad contract: topology indicates local AS is {topo['isd_as']}, "+\
+                "and contract has seller={c.offer.iaid} and buyer={c.buyer_iaid}")
+        return self._contract_as_seller(c) if seller else self._contract_as_buyer(c)
+
     @staticmethod
     def _find_lowest_free_id(ids):
         ids = sorted(ids)
@@ -164,6 +175,23 @@ class Topology:
             "link_to": info.link_to,
         }
 
+    @staticmethod
+    def _remove_interface_from_br(topo: dict, info: TopoInfoFromContract):
+        for br in topo["border_routers"].values():
+            for ifid, iface in br["interfaces"].items():
+                if iface["underlay"]["remote"] == info.remote_underlay:
+                    del br["interfaces"][ifid]
+                    return
+        raise RuntimeError(f"interface with remote {info.remote_underlay} not found in topology")
+
+    @classmethod
+    def _remove_interface(cls, topo: dict, info: TopoInfoFromContract):
+        cls._remove_interface_from_br(topo, info)
+        # remove esdx BR if empty
+        br_id = cls._generate_esdx_br_name(topo)
+        if len(topo["border_routers"][br_id]["interfaces"]) == 0:
+            del topo["border_routers"][br_id]
+
     # TODO(juagargi) this should be used as context manager to prevent locks from ever not being deleted
     def activate(self, c: Contract):
         """
@@ -176,16 +204,8 @@ class Topology:
         self._lock()
         # read topology
         topo = self._load_topo()
-        # find out if we are the seller or the buyer
-        if topo["isd_as"] == c.offer.iaid:
-            seller=True
-        elif topo["isd_as"] == c.buyer_iaid:
-            seller=False
-        else:
-            raise RuntimeError(f"bad contract: topology indicates local AS is {topo['isd_as']}, "+\
-                "and contract has seller={c.offer.iaid} and buyer={c.buyer_iaid}")
         # add contract
-        info = self._contract_as_seller(c) if seller else self._contract_as_buyer(c)
+        info = self._contract_info(topo, c)
         self._add_cotract_to_topo(topo, info)
         # write topology
         with open(self.topofile, "w") as w:
@@ -194,8 +214,18 @@ class Topology:
         # remove lock file
         self._unlock()
 
+    # TODO(juagargi) this should be used as context manager to prevent locks from ever not being deleted
     def deactivate(self, c: Contract):
-        # find interface
-        # remove interface
-        # remove esdx BR if empty
-        pass
+        self._lock()
+        # read topology
+        topo = self._load_topo()
+        # find and remove interface. The remote underlay is unique; remove esdx BR if empty.
+        # TODO(juagargi) is the remote underlay unique per topology?
+        info = self._contract_info(topo, c)
+        self._remove_interface(topo, info)
+
+        # # write topology
+        # with open(self.topofile, "w") as w:
+        #     raw = json.dumps(topo, indent=2) + "\n"
+        #     w.write(raw)
+        self._unlock()

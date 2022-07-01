@@ -5,6 +5,7 @@ from reloader.topology import Topology
 from tempfile import TemporaryDirectory
 from unittest import TestCase
 from util import conversion
+import copy
 import json
 import shutil
 
@@ -334,6 +335,138 @@ class TestTopology(TestCase):
                     self.assertEqual(iface["link_to"], info_111_buys.link_to)
                     self.assertEqual(iface["underlay"]["public"], public_addr)
                     self.assertEqual(iface["underlay"]["remote"], info_111_buys.remote_underlay)
+
+    def test_remove_interface(self):
+        topo_base = { # 111 with one empty esdx br
+            "isd_as": "1-ff00:0:111",
+            "border_routers": {
+                "br1-ff00_0_111-1": {
+                    "internal_addr": "127.0.0.17:31012",
+                    "interfaces": {
+                        "41": {
+                            "underlay": {
+                                "public": "127.0.0.5:50000",
+                                "remote": "127.0.0.4:50000"
+                            },
+                            "isd_as": "1-ff00:0:110",
+                            "link_to": "PARENT",
+                            "mtu": 1280,
+                        },
+                    },
+                },
+                "br1-ff00_0_111-1111": {
+                    "internal_addr": "127.0.0.17:31013",
+                    "interfaces": {},
+                },
+            },
+            "foobar": [1,2,3,4],
+        }
+        topo1 = copy.deepcopy(topo_base)
+        topo1["border_routers"]["br1-ff00_0_111-1111"]["interfaces"] = {
+            "1": {
+                "underlay": {
+                    "public": "127.0.0.5:50001",
+                    "remote": "127.0.0.4:55555"
+                },
+                "isd_as": "1-ff00:0:110",
+                "link_to": "PARENT",
+                "mtu": 1200,
+            },
+        }
+        topo2 = copy.deepcopy(topo_base)
+        topo2["border_routers"]["br1-ff00_0_111-1111"]["interfaces"] = {
+            "1": {
+                "underlay": {
+                    "public": "127.0.0.5:50002",
+                    "remote": "127.0.0.4:55556"
+                },
+                "isd_as": "1-ff00:0:110",
+                "link_to": "PARENT",
+                "mtu": 1200,
+            },
+            "2": {
+                "underlay": {
+                    "public": "127.0.0.5:50001",
+                    "remote": "127.0.0.4:55555"
+                },
+                "isd_as": "1-ff00:0:110",
+                "link_to": "PARENT",
+                "mtu": 1200,
+            },
+        }
+        topo3 = copy.deepcopy(topo_base)
+        topo3["border_routers"]["br1-ff00_0_111-1111"]["interfaces"] = {
+            "1": {
+                "underlay": {
+                    "public": "127.0.0.5:50001",
+                    "remote": "127.0.0.4:55555"
+                },
+                "isd_as": "1-ff00:0:110",
+                "link_to": "PARENT",
+                "mtu": 1200,
+            },
+            "2": {
+                "underlay": {
+                    "public": "127.0.0.5:50002",
+                    "remote": "127.0.0.4:55556"
+                },
+                "isd_as": "1-ff00:0:110",
+                "link_to": "PARENT",
+                "mtu": 1200,
+            },
+        }
+        info = Topology.TopoInfoFromContract(
+            remote_ia="1-ff00:0:110",
+            remote_underlay="127.0.0.4:55555",
+            mtu=1200,
+            link_to="PARENT",
+        )
+        cases = [ # tuples of ( raises?, topo, info, exp_esdx_br?, exp_ifid_not_in )
+            (
+                False,
+                topo1,
+                info,
+                False,
+                "1",
+            ),
+            (
+                False,
+                topo2,
+                info,
+                True,
+                "2",
+            ),
+            (
+                False,
+                topo3,
+                info,
+                True,
+                "1",
+            ),
+        ]
+        r = Topology(Path())
+        for c in cases:
+            with self.subTest():
+                raises = c[0]
+                topo = c[1]
+                info = c[2]
+                esdx_br_in = c[3]
+                ifid = c[4]
+                if raises:
+                    self.assertRaises(
+                        RuntimeError,
+                        r._remove_interface,
+                        topo, info
+                    )
+                else:
+                    r._remove_interface(topo, info)
+                    br_name = r._generate_esdx_br_name(topo)
+                    brs = topo["border_routers"]
+                    if esdx_br_in:
+                        self.assertIn(br_name, brs)
+                        self.assertNotIn(ifid, brs[br_name]["interfaces"])
+                    else:
+                        self.assertNotIn(br_name, brs)
 
     def test_activate(self):
         with TemporaryDirectory() as temp:
