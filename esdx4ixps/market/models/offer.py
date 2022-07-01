@@ -16,7 +16,7 @@ from util import serialize
 
 class OfferManager(models.Manager):
     def available(self, *args, **kwargs):
-        return self.filter(purchase_order=None, *args, **kwargs)
+        return self.filter(deprecated_by=None, *args, **kwargs)
 
     def get_available(self, *args, **kwargs):
         l = self.available(*args, **kwargs)
