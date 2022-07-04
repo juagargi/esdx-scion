@@ -10,7 +10,7 @@ test_market:
 
 test_reloader:
 	@# @python -m pytest -q ./reloader/tests/test_*.py
-	@# call e.g. `make test_reloader args=-s` to display the output
+	@# call e.g. `make test_reloader args=-s` to display the output or `-k test_unlock` to filter
 	@pytest -q ./reloader/ $(args)
 
 test_util:
