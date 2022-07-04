@@ -38,12 +38,31 @@ class TestTopology(TestCase):
         )
 
     def test_init(self):
-        Topology(Path(DATADIR, "topo.json"))
+        Topology(
+            topofile=Path(DATADIR, "topo.json"),
+            internal_addr="1.1.1.1:43210",
+        )
+        self.assertRaises(
+            ValueError,  # bad internal address
+            Topology,
+            Path(),
+            internal_addr="1.1.1.1",
+        )
 
     def test_lock(self):
         with TemporaryDirectory() as temp:
-            r = Topology(Path(temp, "topo.json"), attempts=2)
-            r2 = Topology(Path(temp, "topo2.json"), attempts=2)
+            shutil.copyfile(Path(DATADIR, "topo.json"), Path(temp, "topo.json"))
+            r = Topology(
+                topofile=Path(temp, "topo.json"),
+                internal_addr="1.1.1.1:43210",
+                attempts=2,
+            )
+            shutil.copyfile(Path(DATADIR, "topo.json"), Path(temp, "topo2.json"))
+            r2 = Topology(
+                topofile=Path(temp, "topo2.json"),
+                internal_addr="1.1.1.1:43210",
+                attempts=2,
+            )
             filename = r.lockfile
             # check that lock file exists only during context
             with r._lock():
@@ -63,14 +82,21 @@ class TestTopology(TestCase):
                     f.close()
             # check that the same lock file cannot be opened twice
             with r._lock():
-                r2 = Topology(Path(temp, "topo.json"), attempts=2)  # same as r1
+                r2 = Topology(
+                    topofile=Path(temp, "topo.json"),
+                    internal_addr="1.1.1.1:43210",
+                    attempts=2,
+                )
                 self.assertEqual(r2.lockfile, filename)
                 with self.assertRaises(RuntimeError) as raised:
                     with r2._lock():  # we need to call it as a context manager
                         pass
-        # check that throwing an exception in the body of the handled context is no problem
-        with TemporaryDirectory() as temp:
-            r = Topology(Path(temp, "topo.json"))
+            # check that throwing an exception in the body of the handled context is no problem
+            r = Topology(
+                topofile=Path(temp, "topo.json"),
+                internal_addr="1.1.1.1:43210",
+                attempts=2,
+            )
             filename = r.lockfile
             class myException(Exception):
                 pass
@@ -89,7 +115,10 @@ class TestTopology(TestCase):
 
     def test_contract_as_seller(self):
         c = self._mock_contract()
-        info = Topology(Path())._contract_as_seller(c)
+        info = Topology(
+            topofile=Path(DATADIR, "topo.json"),
+            internal_addr="1.1.1.1:43210",
+        )._contract_as_seller(c)
         self.assertEqual(info.remote_ia, c.buyer_iaid)
         self.assertEqual(info.remote_underlay, c.br_address)
         self.assertEqual(info.mtu, c.offer.br_mtu)
@@ -97,7 +126,10 @@ class TestTopology(TestCase):
 
     def test_contract_as_buyer(self):
         c = self._mock_contract()
-        info = Topology(Path())._contract_as_buyer(c)
+        info = Topology(
+            topofile=Path(DATADIR, "topo.json"),
+            internal_addr="1.1.1.1:43210",
+        )._contract_as_buyer(c)
         self.assertEqual(info.remote_ia, c.offer.iaid)
         self.assertEqual(info.remote_underlay, c.br_address)
         self.assertEqual(info.mtu, c.offer.br_mtu)
@@ -126,7 +158,10 @@ class TestTopology(TestCase):
                 2,
             ),
         ]
-        r = Topology(Path())
+        r = Topology(
+            topofile=Path(DATADIR, "topo.json"),
+            internal_addr="1.1.1.1:43210",
+        )
         for c in cases:
             with self.subTest():
                 got = r._find_lowest_free_id(c[0])
@@ -143,7 +178,10 @@ class TestTopology(TestCase):
                 "br1-442-1111",
             ),
         ]
-        r = Topology(Path())
+        r = Topology(
+            topofile=Path(DATADIR, "topo.json"),
+            internal_addr="1.1.1.1:43210",
+        )
         for c in cases:
             with self.subTest():
                 got = r._generate_esdx_br_name(c[0])
@@ -185,7 +223,10 @@ class TestTopology(TestCase):
                 "",
             ),
         ]
-        r = Topology(Path())
+        r = Topology(
+            topofile=Path(DATADIR, "topo.json"),
+            internal_addr="1.1.1.1:43210",
+        )
         for c in cases:
             with self.subTest():
                 if c[0]:
@@ -308,7 +349,7 @@ class TestTopology(TestCase):
             link_to="PARENT",
         )
 
-        cases = [ # tuples of (raises? topo, info, exp_internal_addr, exp_iface, exp_public_addr)
+        cases = [ # tuples of (raises? topo, info, exp_iface, exp_public_addr)
             (
                 False,
                 topo_111_stock,
@@ -334,15 +375,18 @@ class TestTopology(TestCase):
                 "127.0.0.5:50002",
             ),
         ]
-        r = Topology(Path())
         for c in cases:
             with self.subTest():
                 raises = c[0]
                 topo = c[1]
                 info_111_buys = c[2]
-                interal_addr = c[3]
+                internal_addr = c[3]
                 ifid = c[4]
                 public_addr = c[5]
+                r = Topology(
+                    topofile=Path(DATADIR, "topo.json"),
+                    internal_addr=internal_addr,
+                )
                 if raises:
                     self.assertRaises(
                         RuntimeError,
@@ -354,7 +398,7 @@ class TestTopology(TestCase):
                     esdx_br = r._generate_esdx_br_name(topo)
                     br = topo["border_routers"][esdx_br]
                     self.assertIsNotNone(br)
-                    self.assertEqual(br["internal_addr"], interal_addr)
+                    self.assertEqual(br["internal_addr"], internal_addr)
                     self.assertIn(ifid, br["interfaces"])
                     iface = br["interfaces"][ifid]
                     self.assertEqual(iface["isd_as"], info_111_buys.remote_ia)
@@ -471,7 +515,10 @@ class TestTopology(TestCase):
                 "1",
             ),
         ]
-        r = Topology(Path())
+        r = Topology(
+            topofile=Path(DATADIR, "topo.json"),
+            internal_addr="1.1.1.1:43210",
+        )
         for c in cases:
             with self.subTest():
                 raises = c[0]
@@ -500,7 +547,10 @@ class TestTopology(TestCase):
             shutil.copyfile(Path(DATADIR, "topo.json"), Path(temp, "topo.json"))
             c = self._mock_contract()
             # r = Topology(Path(DATADIR, "topo.json"))
-            r = Topology(Path(temp, "topo.json"))
+            r = Topology(
+                topofile=Path(temp, "topo.json"),
+                internal_addr="1.1.1.1:43210",
+            )
             r.activate(c)
             # load the json and check that our contract is inside
             with open(Path(temp, "topo.json")) as f:
@@ -516,8 +566,10 @@ class TestTopology(TestCase):
         with TemporaryDirectory() as temp:
             shutil.copyfile(Path(DATADIR, "topo.json"), Path(temp, "topo.json"))
             c1 = self._mock_contract()
-            # r = Topology(Path(DATADIR, "topo.json"))
-            r = Topology(Path(temp, "topo.json"))
+            r = Topology(
+                topofile=Path(temp, "topo.json"),
+                internal_addr="1.1.1.1:43210",
+            )
             r.activate(c1)
             # activate another contract:
             c2 = self._mock_contract()

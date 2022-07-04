@@ -24,11 +24,29 @@ class Topology:
         mtu: int
         link_to: str
 
-    def __init__(self, topofile: Path, attempts=10, sleep=0.1):
+    def __init__(
+        self,
+        topofile: Path,
+        internal_addr: str,
+        attempts=10,
+        sleep=0.1):
+        """
+        internal_addr: e.g. "1.1.1.1:43210"
+        """
         self.topofile = topofile
         self.lockfile = Path(self.topofile).parent / Path(".lock." + topofile.name)
+        self.internal_addr_ip, self.internal_addr_port = conversion.ip_port_from_str(internal_addr)
         self.attempts = attempts
         self.sleep = sleep # seconds
+        # check consistency of the topology and internal_addr
+        topo = self._load_topo()
+        for k, v in topo["border_routers"].items():
+            if not k.endswith("-1111"):
+                # check its internal address does not clash with the ESDX's one
+                ip, port = conversion.ip_port_from_str(v["internal_addr"])
+                if ip == self.internal_addr_ip and port == self.internal_addr_port:
+                    raise RuntimeError(f"internal address {internal_addr} already present in a " +\
+                        "non ESDX BR in the topology file")
 
     def _load_topo(self) -> dict:
         with open(self.topofile) as r:
@@ -136,7 +154,6 @@ class Topology:
         # find the ESDX BR; create it if not there.
         # The ESDX BR is the one that ends with -1111
         esdx_br = None
-        internal_addrs = defaultdict(lambda: [])
         public_addrs = defaultdict(lambda: [])
         ifid_inuse = []
         for k, v in topo["border_routers"].items():
@@ -151,20 +168,12 @@ class Topology:
             if k.endswith("-1111"):
                 esdx_br = v
                 break
-            # collect its internal address
-            ip, port = conversion.ip_port_from_str(v["internal_addr"])
-            internal_addrs[ip].append(port)
         if esdx_br is None:
             # not found, add one. Use a similar address to those found in the topology
             # TODO(juagargi) allow to configure the internal and control addresses
-            if len(internal_addrs) != 1:
-                raise RuntimeError("cannot automatically create a new border router: " + \
-                    "collected more than one internal address ip and don't know which " + \
-                    f"one to use (collected {[str(a) for a in internal_addrs.keys()]})")
-            ip, ports = next(iter(internal_addrs.items()))
-            port = max(ports) + 1
             esdx_br = {
-                "internal_addr": conversion.ip_port_to_str(ip, port),
+                "internal_addr": conversion.ip_port_to_str(
+                    self.internal_addr_ip, self.internal_addr_port),
                 "interfaces": defaultdict(lambda: []),
             }
 
