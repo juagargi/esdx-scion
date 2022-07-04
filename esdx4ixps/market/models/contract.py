@@ -5,6 +5,7 @@ from django.dispatch import receiver
 
 from market.models.purchase_order import PurchaseOrder
 from market.models.broker import Broker
+from util import conversion
 from util import crypto
 from util import serialize
 
@@ -22,6 +23,7 @@ class Contract(models.Model):
         on_delete=models.CASCADE,
     )
     timestamp = models.DateTimeField()
+    br_address = models.TextField()
     signature_broker = models.BinaryField()  # signature from the broker (the IXP)
 
     def _pre_save(self):
@@ -42,7 +44,8 @@ class Contract(models.Model):
         return serialize.contract_fields_serialize_to_bytes(
             self.purchase_order.serialize_to_bytes(),
             self.purchase_order.signature,
-            self.timestamp
+            self.timestamp,
+            self.br_address,
         )
 
     def stamp_signature(self):

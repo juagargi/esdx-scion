@@ -1,8 +1,12 @@
-from django.test import TestCase
 from cryptography.hazmat.primitives.asymmetric import rsa
-from market.models.offer import Offer, BW_PERIOD
-from market.models.ases import AS
+from django.test import TestCase
 from django.utils import timezone as tz
+from market.models.ases import AS
+from market.models.contract import Contract
+from market.models.offer import Offer, BW_PERIOD
+from market.models.purchase_order import PurchaseOrder
+from market.purchases import purchase_offer, find_available_br_address
+from pathlib import Path
 from util import crypto
 from util import serialize
 
@@ -10,11 +14,12 @@ import datetime
 
 
 class TestOffer(TestCase):
-    def _create_offer(self, periods: float):
+    @staticmethod
+    def _create_offer(periods: float):
         notbefore = tz.datetime.fromisoformat("2022-04-01T20:00:00.000000+00:00")
         profile = ",".join(["2" for i in range(int(periods))])
         notafter = notbefore + tz.timedelta(seconds=periods*BW_PERIOD)
-        return Offer.objects.create(iaid="1-ff00:0:111", is_core=True, signature=b"",
+        return Offer.objects.create(iaid="1-ff00:0:110", is_core=True, signature=b"",
                                     reachable_paths="",
                                     notbefore=notbefore,
                                     notafter=notafter,
@@ -203,4 +208,62 @@ class TestAS(TestCase):
             AS.objects.create,
             iaid="1-ff00:0:112", # the IA is different
             cert=cert,
+        )
+
+
+class TestFindFreeBRAddress(TestCase):
+    fixtures = ["testdata"]
+    def setUp(self):
+        # load private key for 111
+        with open(Path(__file__).parent.joinpath("data", "1-ff00_0_111.key"), "r") as f:
+            self.key = crypto.load_key(f.read())
+        self.br_template = "1.1.1.1:10-12"
+
+    def _buy_offer(self, offer: Offer):
+        bw_profile = "1"
+        starting_on = tz.datetime.fromisoformat("2022-04-01T20:00:00.000000+00:00")
+        offer_bytes = offer.serialize_to_bytes()
+        data = serialize.purchase_order_fields_serialize_to_bytes(
+            offer_bytes,
+            bw_profile,
+            int(starting_on.timestamp()),
+        )
+        return purchase_offer(
+            offer,
+            "1-ff00:0:111",
+            starting_on,
+            bw_profile,
+            crypto.signature_create(self.key, data),
+        )
+
+    def test_find_available_br_address(self):
+        """ checks the correct behavior of purchases.find_available_br_address """
+        # original offer
+        original_offer = TestOffer._create_offer(1)
+        original_offer.bw_profile = "10"
+        original_offer.br_address_template = self.br_template
+        original_offer.save()
+        # first offer signed by the broker
+        o1 = TestOffer._create_offer(1)
+        o1.bw_profile = "10"
+        o1.br_address_template = self.br_template
+        o1.deprecates = original_offer
+        o1.save()
+
+        self.assertEqual(find_available_br_address(o1), "1.1.1.1:10")
+        c1,o2 = self._buy_offer(o1)
+        self.assertEqual(c1.br_address, "1.1.1.1:10")
+
+        self.assertEqual(find_available_br_address(o2), "1.1.1.1:11")
+        c2,o3 = self._buy_offer(o2)
+        self.assertEqual(c2.br_address, "1.1.1.1:11")
+
+        self.assertEqual(find_available_br_address(o3), "1.1.1.1:12")
+        c3,o4 = self._buy_offer(o3)
+        self.assertEqual(c3.br_address, "1.1.1.1:12")
+
+        self.assertRaises(
+            RuntimeError,
+            find_available_br_address,
+            o4,  # port 13
         )

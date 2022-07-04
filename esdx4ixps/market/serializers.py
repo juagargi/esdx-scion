@@ -87,7 +87,7 @@ class ContractProtoSerializer(proto_serializers.ModelProtoSerializer):
     class Meta:
         model = Contract
         proto_class = market_pb2.Contract
-        fields = ["id", "timestamp", "signature_broker", "purchase_order"]
+        fields = ["id", "timestamp", "br_address", "signature_broker", "purchase_order"]
         depth = 2
 
     def __eq__(self,o: object) -> bool:
@@ -97,6 +97,7 @@ class ContractProtoSerializer(proto_serializers.ModelProtoSerializer):
     #     return super().message_to_data(message)
 
     def data_to_message(self, data: dict) -> market_pb2.Contract:
+        """ dict of fields from the model Contract to the protobuf Contract """
         po = data["purchase_order"]
         buyer = po["buyer"]
         offer = po["offer"]
@@ -118,6 +119,7 @@ class ContractProtoSerializer(proto_serializers.ModelProtoSerializer):
                 br_link_to=offer["br_link_to"],
                 signature=base64.standard_b64decode(offer["signature"]),
             ),
+            br_address=data["br_address"],
             buyer_iaid=buyer["iaid"],
             buyer_starting_on=conversion.pb_timestamp_from_str(po["starting_on"]),
             buyer_bw_profile=po["bw_profile"],

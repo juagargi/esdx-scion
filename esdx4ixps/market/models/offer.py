@@ -52,7 +52,7 @@ class Offer(models.Model):
     # bw per period, e.g. 3,3,2,4,4 means 3 BW_STEP during the first BW_PERIOD, then 3, then 2, etc
     price_per_unit = models.FloatField()
     bw_profile = models.TextField(validators=[validators.int_list_validator()])
-    br_address_template  = models.TextField()
+    br_address_template = models.TextField()
     br_mtu = models.IntegerField(validators=[
         validators.MinValueValidator(100),
         validators.MaxValueValidator(65534)])
@@ -135,6 +135,10 @@ class Offer(models.Model):
 
     def contains_profile(self, bw_profile: str, starting: datetime) -> bool:
         return self.purchase(bw_profile, starting) != None
+
+    def is_sold(self):
+        """ returns true if there exists a purchase order for this offer """
+        return hasattr(self, "purchase_order")
 
     def purchase(self, bw_profile: str, starting: datetime) -> str:
         """

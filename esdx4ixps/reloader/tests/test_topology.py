@@ -26,7 +26,7 @@ class TestTopology(TestCase):
                 qos_class=1,
                 price_per_unit=0.001,
                 bw_profile="3,3",
-                br_address="1.1.1.1:50000",
+                br_address_template="1.1.1.1:50000-50100",
                 br_mtu=1500,
                 br_link_to="PARENT",
             ),
@@ -34,6 +34,7 @@ class TestTopology(TestCase):
             buyer_iaid="1-ff00:0:111",
             buyer_starting_on=conversion.pb_timestamp_from_seconds(1),
             buyer_bw_profile="3,3",
+            br_address="1.1.1.1:50000"
         )
 
     def test_init(self):
@@ -64,7 +65,7 @@ class TestTopology(TestCase):
         c = self._mock_contract()
         info = Topology(Path())._contract_as_seller(c)
         self.assertEqual(info.remote_ia, c.buyer_iaid)
-        self.assertEqual(info.remote_underlay, c.offer.br_address)
+        self.assertEqual(info.remote_underlay, c.br_address)
         self.assertEqual(info.mtu, c.offer.br_mtu)
         self.assertEqual(info.link_to, c.offer.br_link_to)
 
@@ -72,7 +73,7 @@ class TestTopology(TestCase):
         c = self._mock_contract()
         info = Topology(Path())._contract_as_buyer(c)
         self.assertEqual(info.remote_ia, c.offer.iaid)
-        self.assertEqual(info.remote_underlay, c.offer.br_address)
+        self.assertEqual(info.remote_underlay, c.br_address)
         self.assertEqual(info.mtu, c.offer.br_mtu)
         self.assertEqual(info.link_to, c.offer.br_link_to)
 
@@ -483,7 +484,7 @@ class TestTopology(TestCase):
         self.assertIn("1", br["interfaces"])
         iface = br["interfaces"]["1"]
         self.assertEqual(iface["isd_as"], c.offer.iaid)
-        self.assertEqual(iface["underlay"]["remote"], c.offer.br_address)
+        self.assertEqual(iface["underlay"]["remote"], c.br_address)
 
     def test_deactivate(self):
         with TemporaryDirectory() as temp:
@@ -494,7 +495,7 @@ class TestTopology(TestCase):
             r.activate(c1)
             # activate another contract:
             c2 = self._mock_contract()
-            c2.offer.br_address = "1.1.1.1:50001"
+            c2.br_address = "1.1.1.1:50001"
             r.activate(c2)
             # load the json with the two esdx interfaces
             with open(Path(temp, "topo.json")) as f:

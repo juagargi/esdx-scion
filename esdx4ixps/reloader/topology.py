@@ -55,7 +55,7 @@ class Topology:
         """ Returns the relevant info for the seller """
         return Topology.TopoInfoFromContract(
             remote_ia=c.buyer_iaid,
-            remote_underlay=c.offer.br_address,
+            remote_underlay=c.br_address,
             mtu=c.offer.br_mtu,
             link_to=c.offer.br_link_to,
         )
@@ -64,7 +64,7 @@ class Topology:
         """ Returns the relevant info for the buyer """
         return Topology.TopoInfoFromContract(
             remote_ia=c.offer.iaid,
-            remote_underlay=c.offer.br_address,
+            remote_underlay=c.br_address,
             mtu=c.offer.br_mtu,
             link_to=c.offer.br_link_to,
         )

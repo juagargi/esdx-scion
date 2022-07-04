@@ -155,7 +155,7 @@ def provider():
             qos_class=1,
             price_per_unit=0.000000001,
             bw_profile="2,2,2,2",
-            br_address="10.1.1.1:50000",
+            br_address_template="10.1.1.1:50000-50100",
             br_mtu=1500,
             br_link_to="PARENT",
         )

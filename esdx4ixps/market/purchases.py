@@ -6,10 +6,29 @@ from market.models.offer import Offer
 from market.models.ases import AS
 from market.models.purchase_order import PurchaseOrder
 from market.models.contract import Contract
+from util import conversion
 from util import crypto
 from util import serialize
 
 import copy
+
+
+def find_available_br_address(offer: Offer) -> str:
+    """
+    returns a br_address with the ip and the first available port not in use
+    by walking the offer linked list and retrieving all used addresses.
+    The "offer" argument is the available offer signed by the broker.
+    """
+    template = offer.br_address_template
+    ip, min_port, max_port = conversion.ip_port_range_from_str(template)
+    # get last contract; if it exists it will contain the last port used
+    port = min_port
+    if offer.deprecates is not None and offer.deprecates.is_sold():
+        _, port = conversion.ip_port_from_str(offer.deprecates.purchase_order.contract.br_address)
+        port += 1
+    if port > max_port:
+        raise RuntimeError(f"cannot find a free port with template {template}")
+    return conversion.ip_port_to_str(ip, port)
 
 
 def purchase_offer(offer: Offer,
@@ -39,6 +58,7 @@ def purchase_offer(offer: Offer,
         contract = Contract(
             purchase_order=purchase_order,
         )
+        contract.br_address = find_available_br_address(offer)
         contract.stamp_signature()
         contract.save()
         # create new offer
