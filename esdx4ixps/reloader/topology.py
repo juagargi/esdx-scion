@@ -1,9 +1,11 @@
 from collections import defaultdict
 from contextlib import contextmanager
+from ipaddress import IPv4Address, IPv6Address, ip_address
+import ipaddress
 from unicodedata import name
 from market_pb2 import Contract
 from pathlib import Path
-from typing import NamedTuple
+from typing import Callable, Dict, List, NamedTuple, Union
 from util import conversion
 import json
 import os
@@ -28,14 +30,31 @@ class Topology:
         self,
         topofile: Path,
         internal_addr: str,
+        router: Callable[[Union[IPv4Address, IPv6Address]], Union[IPv4Address, IPv6Address]]=None,
+        min_port=50000,
+        max_port=51000,
         attempts=10,
         sleep=0.1):
         """
         internal_addr: e.g. "1.1.1.1:43210"
+        router: a function fcn(IP)-: ip that returns the ip of the local interface to use. If None,
+                then a default of 127.0.0.1 for IPv4 and ::1 for IPv6 is used.
         """
         self.topofile = topofile
         self.lockfile = Path(self.topofile).parent / Path(".lock." + topofile.name)
         self.internal_addr_ip, self.internal_addr_port = conversion.ip_port_from_str(internal_addr)
+        if router is None:
+            def _default_router(ip):
+                if ip.version == 4:
+                    return ip_address("127.0.0.1")
+                elif ip.version == 6:
+                    return ip_address("::1")
+                else:
+                    raise ValueError(f"unknown ip version in {ip}")
+            router = _default_router
+        self.router = router
+        self.min_port = min_port
+        self.max_port = max_port
         self.attempts = attempts
         self.sleep = sleep # seconds
         # check consistency of the topology and internal_addr
@@ -106,10 +125,10 @@ class Topology:
         return self._contract_as_seller(c) if seller else self._contract_as_buyer(c)
 
     @staticmethod
-    def _find_lowest_free_id(ids):
-        ids = sorted(ids)
-        ret = 1
-        for id in ids:
+    def _find_lowest_free_value(values: List[int], min_value:int=1) -> int:
+        values = sorted(values)
+        ret = min_value
+        for id in values:
             if ret < id:
                 break
             ret = id + 1
@@ -120,25 +139,6 @@ class Topology:
         ia = topo["isd_as"]
         ia = ia.replace(":", "_")
         return f"br{ia}-1111"
-
-    @classmethod
-    def _find_avail_public_addr(cls, addrs: dict) -> str:
-        """
-        the same IP as the only one in the dict, and the smallest free port possible which
-        is bigger than the smaller of the ports in the list
-        """
-        if len(addrs) != 1:
-            raise RuntimeError(f"cannot determine the public address: expected one ip but got " + \
-                f"{len(addrs)} instead")
-        ip, ports = next(iter(addrs.items()))
-        ports = sorted(ports)
-        port = 65536 if len(ports) > 0 else 1
-        for p in ports:
-            if port < p:
-                break
-            port = p + 1
-
-        return conversion.ip_port_to_str(ip, port)
 
     def _add_cotract_to_topo(self, topo: dict, info: TopoInfoFromContract):
         """
@@ -154,6 +154,7 @@ class Topology:
         # find the ESDX BR; create it if not there.
         # The ESDX BR is the one that ends with -1111
         esdx_br = None
+        esdx_br_name = self._generate_esdx_br_name(topo)
         public_addrs = defaultdict(lambda: [])
         ifid_inuse = []
         for k, v in topo["border_routers"].items():
@@ -165,22 +166,24 @@ class Topology:
                 ip, port = conversion.ip_port_from_str(a)
                 public_addrs[ip].append(port)
             # is this the ESDX router?
-            if k.endswith("-1111"):
+            if k == esdx_br_name:
                 esdx_br = v
-                break
         if esdx_br is None:
-            # not found, add one. Use a similar address to those found in the topology
-            # TODO(juagargi) allow to configure the internal and control addresses
             esdx_br = {
                 "internal_addr": conversion.ip_port_to_str(
                     self.internal_addr_ip, self.internal_addr_port),
                 "interfaces": defaultdict(lambda: []),
             }
 
-            topo["border_routers"][self._generate_esdx_br_name(topo)] = esdx_br
+            topo["border_routers"][esdx_br_name] = esdx_br
         # add a new interface with the values from "info"
-        ifid = self._find_lowest_free_id(ifid_inuse)
-        public_addr = self._find_avail_public_addr(public_addrs)
+        ifid = self._find_lowest_free_value(ifid_inuse)
+        remote_ip, _ = conversion.ip_port_from_str(info.remote_underlay)
+        public_ip = self.router(remote_ip)
+        port = self._find_lowest_free_value(public_addrs[public_ip], min_value=self.min_port)
+        if port > self.max_port:
+            raise RuntimeError(f"could not find a free port for public ip {public_ip}")
+        public_addr = conversion.ip_port_to_str(public_ip, port)
         esdx_br["interfaces"][str(ifid)] = {
             "underlay": {
                 "public": public_addr,

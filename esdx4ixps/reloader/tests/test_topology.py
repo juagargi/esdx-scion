@@ -136,26 +136,41 @@ class TestTopology(TestCase):
         self.assertEqual(info.link_to, c.offer.br_link_to)
 
     def test_find_lowest_free_id(self):
-        cases = [ # tuples of ( [elements], expected_next )
+        cases = [ # tuples of ( [elements], min_value, expected_next )
             (
                 [1,2,3],
+                1,
                 4,
             ),
             (
                 [],
                 1,
+                1,
             ),
             (
                 [2,3,4],
                 1,
+                1,
             ),
             (
                 [1,2,4,5],
+                1,
                 3,
             ),
             (
                 [41,1],
+                1,
                 2,
+            ),
+            (
+                [13,14,11],
+                11,
+                12,
+            ),
+            (
+                [],
+                50000,
+                50000,
             ),
         ]
         r = Topology(
@@ -163,9 +178,15 @@ class TestTopology(TestCase):
             internal_addr="1.1.1.1:43210",
         )
         for c in cases:
+            values = c[0]
+            min_value = c[1]
+            expected_value = c[2]
             with self.subTest():
-                got = r._find_lowest_free_id(c[0])
-                self.assertEqual(got, c[1])
+                got = r._find_lowest_free_value(
+                    values=values,
+                    min_value=min_value,
+                )
+                self.assertEqual(got, expected_value)
 
     def test_generate_esdx_br_name(self):
         cases = [ # tuples of ( dict, expected_str )
@@ -186,58 +207,6 @@ class TestTopology(TestCase):
             with self.subTest():
                 got = r._generate_esdx_br_name(c[0])
                 self.assertEqual(got, c[1])
-
-    def test_find_avail_public_addr(self):
-        cases = [ # tuples of ( raises?, DICT[ip]:port_list, expected_str )
-            (
-                False,
-                {ip_address("1.1.1.1"): [1,2,3]},
-                "1.1.1.1:4",
-            ),
-            (
-                False,
-                {ip_address("1.1.1.1"): [50,51,55]},
-                "1.1.1.1:52",
-            ),
-            (
-                False,
-                {ip_address("1.1.1.1"): []}, # this case should never happen anyways
-                "1.1.1.1:1",
-            ),
-            (
-                False,
-                {ip_address("fd00:f00d:cafe::7f00:9"): [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,17,18]},
-                "[fd00:f00d:cafe::7f00:9]:16",
-            ),
-            (
-                True,
-                {},
-                "",
-            ),
-            (
-                True,
-                {
-                    ip_address("1.1.1.1"): [1],
-                    ip_address("1.1.1.2"): [1],
-                },
-                "",
-            ),
-        ]
-        r = Topology(
-            topofile=Path(DATADIR, "topo.json"),
-            internal_addr="1.1.1.1:43210",
-        )
-        for c in cases:
-            with self.subTest():
-                if c[0]:
-                    self.assertRaises(
-                        RuntimeError,
-                        r._find_avail_public_addr,
-                        c[1]
-                    )
-                else:
-                    got = r._find_avail_public_addr(c[1])
-                    self.assertEqual(got, c[2])
 
     def test_add_contract_to_topo(self):
         topo_111_stock = { # 1-ff00:0:111 stock (kind of)
@@ -282,11 +251,8 @@ class TestTopology(TestCase):
                     "interfaces": {
                         "2": {
                             "underlay": {
-                                # TODO(juagargi) uncomment this once we have settings for public_addrs instead of guessing them
-                                # "public": "[fd00:f00d:cafe::7f00:4]:50000",
-                                # "remote": "[fd00:f00d:cafe::7f00:5]:50000",
-                                "public": "127.0.0.4:50001",
-                                "remote": "127.0.0.6:50000",
+                                "public": "[fd00:f00d:cafe::7f00:4]:50000",
+                                "remote": "[fd00:f00d:cafe::7f00:5]:50000",
                             },
                             "isd_as": "1-ff00:0:112",
                             "link_to": "CHILD",
@@ -318,8 +284,8 @@ class TestTopology(TestCase):
                     "interfaces": {
                         "1": {
                             "underlay": {
-                                "public": "127.0.0.5:50001",
-                                "remote": "127.0.0.4:55555"
+                                "public": "[fd00:f00d:cafe::7f00:4]:50000",
+                                "remote": "[fd00:f00d:cafe::7f00:5]:50000",
                             },
                             "isd_as": "1-ff00:0:110",
                             "link_to": "PARENT",
@@ -348,15 +314,21 @@ class TestTopology(TestCase):
             mtu=1200,
             link_to="PARENT",
         )
+        info_111_buys_again_ipv6 = Topology.TopoInfoFromContract(
+            remote_ia="1-ff00:0:110",
+            remote_underlay="[fd00:f00d:cafe::7f00:5]:50002",
+            mtu=1200,
+            link_to="PARENT",
+        )
 
-        cases = [ # tuples of (raises? topo, info, exp_iface, exp_public_addr)
+        cases = [ # tuples of (raises? topo, info, internal_addr, exp_iface, exp_public_addr)
             (
                 False,
                 topo_111_stock,
                 info_111_buys,
                 "127.0.0.17:31013",
                 "1",
-                "127.0.0.5:50001",
+                "127.0.0.1:50000",
             ),
             (
                 False,
@@ -364,7 +336,7 @@ class TestTopology(TestCase):
                 info_110_sells,
                 "127.0.0.9:31007",
                 "3",
-                "127.0.0.4:50002",
+                "127.0.0.1:50000",
             ),
             (
                 False,
@@ -372,14 +344,22 @@ class TestTopology(TestCase):
                 info_111_buys_again,
                 "127.0.0.17:31013",
                 "2",
-                "127.0.0.5:50002",
+                "127.0.0.1:50000",
+            ),
+            (
+                False,
+                topo_111_with_esdx,
+                info_111_buys_again_ipv6,
+                "127.0.0.17:31013",
+                "2",
+                "[::1]:50000",
             ),
         ]
         for c in cases:
             with self.subTest():
                 raises = c[0]
-                topo = c[1]
-                info_111_buys = c[2]
+                topo = copy.deepcopy(c[1])
+                info = c[2]
                 internal_addr = c[3]
                 ifid = c[4]
                 public_addr = c[5]
@@ -391,21 +371,21 @@ class TestTopology(TestCase):
                     self.assertRaises(
                         RuntimeError,
                         r._add_cotract_to_topo,
-                        topo, info_111_buys
+                        topo, info
                     )
                 else:
-                    r._add_cotract_to_topo(topo, info_111_buys)
+                    r._add_cotract_to_topo(topo, info)
                     esdx_br = r._generate_esdx_br_name(topo)
                     br = topo["border_routers"][esdx_br]
                     self.assertIsNotNone(br)
                     self.assertEqual(br["internal_addr"], internal_addr)
                     self.assertIn(ifid, br["interfaces"])
                     iface = br["interfaces"][ifid]
-                    self.assertEqual(iface["isd_as"], info_111_buys.remote_ia)
-                    self.assertEqual(iface["mtu"], info_111_buys.mtu)
-                    self.assertEqual(iface["link_to"], info_111_buys.link_to)
+                    self.assertEqual(iface["isd_as"], info.remote_ia)
+                    self.assertEqual(iface["mtu"], info.mtu)
+                    self.assertEqual(iface["link_to"], info.link_to)
                     self.assertEqual(iface["underlay"]["public"], public_addr)
-                    self.assertEqual(iface["underlay"]["remote"], info_111_buys.remote_underlay)
+                    self.assertEqual(iface["underlay"]["remote"], info.remote_underlay)
 
     def test_remove_interface(self):
         topo_base = { # 111 with one empty esdx br
