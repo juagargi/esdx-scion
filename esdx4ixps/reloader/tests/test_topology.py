@@ -42,23 +42,49 @@ class TestTopology(TestCase):
 
     def test_lock(self):
         with TemporaryDirectory() as temp:
-            r1 = Topology(Path(temp, "topo.json"))
-            r2 = Topology(Path(temp, "topo.json"))
-            r1._lock()
+            r = Topology(Path(temp, "topo.json"), attempts=2)
+            r2 = Topology(Path(temp, "topo2.json"), attempts=2)
+            filename = r.lockfile
+            # check that lock file exists only during context
+            with r._lock():
+                f = open(filename)
+                f.close()
             self.assertRaises(
-                RuntimeError,
-                r2._lock,
+                FileNotFoundError,
+                open,
+                filename
             )
-            r1._unlock()
-            r2._lock()
-            r2._unlock()
-
-    def test_unlock(self):
+            # check two lock files can be opened if not the same
+            with r._lock():
+                f = open(filename)
+                f.close()
+                with r2._lock():
+                    f = open(r2.lockfile)
+                    f.close()
+            # check that the same lock file cannot be opened twice
+            with r._lock():
+                r2 = Topology(Path(temp, "topo.json"), attempts=2)  # same as r1
+                self.assertEqual(r2.lockfile, filename)
+                with self.assertRaises(RuntimeError) as raised:
+                    with r2._lock():  # we need to call it as a context manager
+                        pass
+        # check that throwing an exception in the body of the handled context is no problem
         with TemporaryDirectory() as temp:
-            r1 = Topology(Path(temp, "topo.json"))
-            self.assertRaises(
-                RuntimeError,
-                r1._unlock,
+            r = Topology(Path(temp, "topo.json"))
+            filename = r.lockfile
+            class myException(Exception):
+                pass
+            try:
+                with r._lock():
+                    f = open(filename)
+                    f.close()
+                    raise myException()
+            except myException:
+                pass
+            self.assertRaises(  # the lock file should have been removed
+                FileNotFoundError,
+                open,
+                filename
             )
 
     def test_contract_as_seller(self):

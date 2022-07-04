@@ -1,4 +1,5 @@
 from collections import defaultdict
+from contextlib import contextmanager
 from unicodedata import name
 from market_pb2 import Contract
 from pathlib import Path
@@ -17,39 +18,45 @@ class Topology:
     """ Represents the SCiON topology """
 
     class TopoInfoFromContract(NamedTuple):
+        """ topology information derived from a Contract """
         remote_ia: str
         remote_underlay: str
         mtu: int
         link_to: str
 
-    def __init__(self, topofile: Path):
+    def __init__(self, topofile: Path, attempts=10, sleep=0.1):
         self.topofile = topofile
         self.lockfile = Path(self.topofile).parent / Path(".lock." + topofile.name)
-        self.attempts = 10
-        self.sleep = 0.1 # seconds
+        self.attempts = attempts
+        self.sleep = sleep # seconds
 
     def _load_topo(self) -> dict:
         with open(self.topofile) as r:
             return json.load(r)
 
+    @contextmanager
     def _lock(self):
-        ex = None
-        for attempts in range(self.attempts):
-            try:
-                with open(self.lockfile, "x+b"):
-                    return
-            except FileExistsError as e:
-                ex = e
-                attempts += 1
-                time.sleep(self.sleep)
-        if attempts >= self.attempts:
-            raise RuntimeError(ex) from ex
-
-    def _unlock(self):
+        def _lock():
+            ex = None
+            for attempts in range(self.attempts):
+                try:
+                    with open(self.lockfile, "x+b"):
+                        return
+                except FileExistsError as e:
+                    ex = e
+                    attempts += 1
+                    time.sleep(self.sleep)
+            if attempts >= self.attempts:
+                raise RuntimeError(ex) from ex
+        _lock()
         try:
-            os.remove(self.lockfile)
-        except FileNotFoundError as ex:
-            raise RuntimeError(ex) from ex
+            yield
+        finally:
+            try:
+                os.remove(self.lockfile)
+            except FileNotFoundError as ex:
+                raise RuntimeError(ex) from ex
+
 
     def _contract_as_seller(self, c: Contract) -> TopoInfoFromContract:
         """ Returns the relevant info for the seller """
@@ -192,7 +199,6 @@ class Topology:
         if len(topo["border_routers"][br_id]["interfaces"]) == 0:
             del topo["border_routers"][br_id]
 
-    # TODO(juagargi) this should be used as context manager to prevent locks from ever not being deleted
     def activate(self, c: Contract):
         """
         Creates a new topology based on the existing topology and the contract.
@@ -200,32 +206,27 @@ class Topology:
         of the topology are done through this Topology class, activating/deactivating the
         contracts should have no race conditions.
         """
-        # create lock file
-        self._lock()
-        # read topology
-        topo = self._load_topo()
-        # add contract
-        info = self._contract_info(topo, c)
-        self._add_cotract_to_topo(topo, info)
-        # write topology
-        with open(self.topofile, "w") as w:
-            raw = json.dumps(topo, indent=2) + "\n"
-            w.write(raw)
-        # remove lock file
-        self._unlock()
+        with self._lock():
+            # read topology
+            topo = self._load_topo()
+            # add contract
+            info = self._contract_info(topo, c)
+            self._add_cotract_to_topo(topo, info)
+            # write topology
+            with open(self.topofile, "w") as w:
+                raw = json.dumps(topo, indent=2) + "\n"
+                w.write(raw)
 
-    # TODO(juagargi) this should be used as context manager to prevent locks from ever not being deleted
     def deactivate(self, c: Contract):
-        self._lock()
-        # read topology
-        topo = self._load_topo()
-        # find and remove interface. The remote underlay is unique; remove esdx BR if empty.
-        # TODO(juagargi) is the remote underlay unique per topology?
-        info = self._contract_info(topo, c)
-        self._remove_interface(topo, info)
+        with self._lock():
+            # read topology
+            topo = self._load_topo()
+            # find and remove interface. The remote underlay is unique; remove esdx BR if empty.
+            # TODO(juagargi) is the remote underlay unique per topology?
+            info = self._contract_info(topo, c)
+            self._remove_interface(topo, info)
 
-        # write topology
-        with open(self.topofile, "w") as w:
-            raw = json.dumps(topo, indent=2) + "\n"
-            w.write(raw)
-        self._unlock()
+            # write topology
+            with open(self.topofile, "w") as w:
+                raw = json.dumps(topo, indent=2) + "\n"
+                w.write(raw)
