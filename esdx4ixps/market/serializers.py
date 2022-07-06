@@ -123,3 +123,9 @@ class ContractProtoSerializer(proto_serializers.ModelProtoSerializer):
             buyer_bw_profile=po["bw_profile"],
             buyer_signature=base64.standard_b64decode(po["signature"]),
         )
+
+
+def pb_compare_messages(msg1, msg2) -> bool:
+    if type(msg1) != type(msg2):
+        return False
+    return msg1.SerializeToString() == msg2.SerializeToString()

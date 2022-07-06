@@ -3,7 +3,7 @@ from django.db import IntegrityError, transaction
 from market.models.ases import AS
 from market.models.contract import Contract
 from market.models.offer import Offer
-from market.serializers import OfferProtoSerializer, ContractProtoSerializer
+from market.serializers import OfferProtoSerializer, ContractProtoSerializer, pb_compare_messages
 from market.purchases import purchase_offer
 from util.conversion import time_from_pb_timestamp
 from util import crypto
@@ -51,20 +51,26 @@ class MarketService(Service):
         except Exception as ex:
             raise MarketServiceError(str(ex)) from ex
 
-    def Purchase(self, request, context):
+    def Purchase(self, request: market_pb2.PurchaseRequest, context):
         try:
             with transaction.atomic():
-                offer = Offer.objects.get(id=request.offer_id)
-                starts_at = time_from_pb_timestamp(request.starting_on)
-                contract, offer = purchase_offer(
+                offer = Offer.objects.get(id=request.offer.id)
+                # check that this offer matches request.offer
+                if not pb_compare_messages(request.offer, OfferProtoSerializer(offer).message):
+                    raise MarketServiceError("purchase request validation failed: " + \
+                        f"offer with ID {request.offer.id} not the same as in the request")
+                # create contract and new offer
+                contract, _ = purchase_offer(
                     offer,
                     request.buyer_iaid,
-                    starts_at,
+                    time_from_pb_timestamp(request.starting_on),
                     request.bw_profile,
                     request.signature,
                 )
             serializer = ContractProtoSerializer(contract)
             return serializer.message
+        except MarketServiceError:
+            raise
         except IntegrityError:
             raise MarketServiceError("data was modified during the transaction")
         except Exception as ex:

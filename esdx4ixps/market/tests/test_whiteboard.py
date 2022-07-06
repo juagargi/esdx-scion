@@ -137,8 +137,9 @@ class TestWhiteboard(TestCase):
                 "2"
             )
 
+            pb_offer = OfferProtoSerializer(matched_offer).message
             request = market_pb2.PurchaseRequest(
-                offer_id=matched_offer.id,
+                offer=pb_offer,
                 buyer_iaid="1-ff00:0:112",
                 signature=signature,
                 bw_profile="2",

@@ -42,11 +42,13 @@ message Offer {
 }
 
 message PurchaseRequest {
-    int64 offer_id = 1;
-    string buyer_iaid = 2; // ISD-AS ID of the buyer
-    bytes signature = 3; // base64 encoded
-    string bw_profile = 4;
-    google.protobuf.Timestamp starting_on = 5;
+    // information about the offer:
+    Offer offer = 1;
+    // buyer information:
+    string buyer_iaid = 11; // ISD-AS ID of the buyer
+    string bw_profile = 12;
+    google.protobuf.Timestamp starting_on = 13;
+    bytes signature = 14; // over all fields except offer_id
 }
 
 message Contract {

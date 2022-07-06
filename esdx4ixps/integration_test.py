@@ -53,7 +53,7 @@ class Client:
         offerbytes = serialize.offer_serialize_to_bytes(offer, True)
 
         request = market_pb2.PurchaseRequest(
-            offer_id=offer.id,
+            offer=offer,
             buyer_iaid=self.ia,
             signature=b"",
             bw_profile="1,1,1,1",
