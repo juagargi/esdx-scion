@@ -78,6 +78,7 @@ class OfferProtoSerializer(proto_serializers.ProtoSerializer):
             self.validated_data["br_address_template"],
             self.validated_data["br_mtu"],
             self.validated_data["br_link_to"],
+            self.validated_data["signature"],
         )
 
 

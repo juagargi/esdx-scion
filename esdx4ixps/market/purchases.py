@@ -78,7 +78,7 @@ def sign_purchase_order(
     bw_profile: str) -> str:
     """ creates a signature for the fields of a purchase order """
     data = serialize.purchase_order_fields_serialize_to_bytes(
-        o.serialize_to_bytes(),
+        o.serialize_to_bytes(True),
         bw_profile,
         int(starting_on.timestamp())
     )

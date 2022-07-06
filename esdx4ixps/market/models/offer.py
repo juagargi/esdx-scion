@@ -42,7 +42,7 @@ class Offer(models.Model):
                             max_length=255,
                             verbose_name="The IA id like 1-ff00:1:1",
                             validators=[ia_validator()])
-    signature = models.BinaryField() # in the DB, this is signed by the IXP
+    signature = models.BinaryField() # in the DB, this is signed by the IXP or the original seller
     notbefore = models.DateTimeField()
     notafter = models.DateTimeField()  # the difference notafter - notbefore is len(bw_profile)
     # this will be a '\n' separated list of comma separated lists of ISD-AS#IF,IF sequences
@@ -91,7 +91,7 @@ class Offer(models.Model):
         # check the br_address_template is an IP:port-port
         conversion.ip_port_range_from_str(self.br_address_template) # will raise ValueError if bad format
 
-    def serialize_to_bytes(self):
+    def serialize_to_bytes(self, include_signature: bool=False):
         return serialize.offer_fields_serialize_to_bytes(
             self.iaid,
             int(self.notbefore.timestamp()),
@@ -103,6 +103,7 @@ class Offer(models.Model):
             self.br_address_template,
             self.br_mtu,
             self.br_link_to,
+            self.signature if include_signature else b"",
         )
 
     def validate_signature_from_seller(self):

@@ -48,8 +48,9 @@ class Client:
 
     def _buy(self, offer: market_pb2.Offer):
         # verify broker's signature
-        offerbytes = serialize.offer_specification_serialize_to_bytes(offer.specs)
+        offerbytes = serialize.offer_serialize_to_bytes(offer, False)
         crypto.signature_validate(self.broker_cert, offer.specs.signature, offerbytes)
+        offerbytes = serialize.offer_serialize_to_bytes(offer, True)
 
         request = market_pb2.PurchaseRequest(
             offer_id=offer.id,
@@ -92,6 +93,7 @@ class Client:
         # buy
         with grpc.insecure_channel('localhost:50051') as channel:
             self.stub = market_pb2_grpc.MarketControllerStub(channel)
+            pb_contract = None
             for _ in range(2):
                 offers = self._list()
                 time.sleep(self.wait)
@@ -162,7 +164,7 @@ def provider():
             "1-ff00_0_110.key"), "r") as f:
             key = crypto.load_key(f.read())
         # sign with private key
-        data = serialize.offer_specification_serialize_to_bytes(specs)
+        data = serialize.offer_specification_serialize_to_bytes(specs, False)
         specs.signature = crypto.signature_create(key, data)
         # do RPC
         saved = stub.AddOffer(specs)

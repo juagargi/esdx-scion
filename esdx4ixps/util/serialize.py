@@ -11,7 +11,8 @@ def offer_fields_serialize_to_bytes(
     bw_profile: str,
     br_address_template: str,
     br_mtu: int,
-    br_link_to: str) -> bytes:
+    br_link_to: str,
+    signature: bytes) -> bytes:
     """
     Fields:
     notbefore, notafter: in seconds from UTC epoch
@@ -19,11 +20,12 @@ def offer_fields_serialize_to_bytes(
     s = "ia:" + iaid + str(notbefore) + str(notafter) + \
         "reachable:" + reachable_paths + str(qos_class) + str(price_per_unit) + \
         "profile:" + bw_profile + "br_address_template:" + br_address_template + \
-        "br_mtu:" + str(br_mtu) + "br_link_to:" + br_link_to
-    return s.encode("ascii")
+        "br_mtu:" + str(br_mtu) + "br_link_to:" + br_link_to + "signature:"
+    return s.encode("ascii") + signature
 
 
-def offer_specification_serialize_to_bytes(s: market_pb2.OfferSpecification) -> bytes:
+def offer_specification_serialize_to_bytes(
+    s: market_pb2.OfferSpecification, include_signature: bool) -> bytes:
     return offer_fields_serialize_to_bytes(
         s.iaid,
         s.notbefore.seconds,
@@ -35,11 +37,12 @@ def offer_specification_serialize_to_bytes(s: market_pb2.OfferSpecification) -> 
         s.br_address_template,
         s.br_mtu,
         s.br_link_to,
+        s.signature if include_signature else b"",
     )
 
 
-def offer_serialize_to_bytes(o: market_pb2.Offer) -> bytes:
-    return offer_specification_serialize_to_bytes(o.specs)
+def offer_serialize_to_bytes(o: market_pb2.Offer, include_signature: bool) -> bytes:
+    return offer_specification_serialize_to_bytes(o.specs, include_signature)
 
 
 def purchase_order_fields_serialize_to_bytes(

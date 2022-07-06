@@ -35,7 +35,7 @@ class PurchaseOrder(models.Model):
             raise ValueError("invalid purchase order signature") from ex
 
     def serialize_to_bytes(self) -> bytes:
-        offerbytes = self.offer.serialize_to_bytes()
+        offerbytes = self.offer.serialize_to_bytes(True)
         return serialize.purchase_order_fields_serialize_to_bytes(
             offerbytes,
             self.bw_profile,

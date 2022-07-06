@@ -174,9 +174,11 @@ class TestOffer(TestCase):
             "2,2,2,2",
             "1.1.1.1:42-45",
             1500,
-            "PARENT")
+            "PARENT",
+            b"",
+        )
         self.assertEqual(("ia:1-ff00:0:1111112reachable:path1,path21100profile:2,2,2,2"+\
-            "br_address_template:1.1.1.1:42-45br_mtu:1500br_link_to:PARENT").encode("ascii"), b)
+            "br_address_template:1.1.1.1:42-45br_mtu:1500br_link_to:PARENTsignature:").encode("ascii"), b)
 
 
 class TestAS(TestCase):
@@ -222,7 +224,7 @@ class TestFindFreeBRAddress(TestCase):
     def _buy_offer(self, offer: Offer):
         bw_profile = "1"
         starting_on = tz.datetime.fromisoformat("2022-04-01T20:00:00.000000+00:00")
-        offer_bytes = offer.serialize_to_bytes()
+        offer_bytes = offer.serialize_to_bytes(True)
         data = serialize.purchase_order_fields_serialize_to_bytes(
             offer_bytes,
             bw_profile,

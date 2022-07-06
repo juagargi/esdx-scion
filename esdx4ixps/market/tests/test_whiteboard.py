@@ -89,7 +89,7 @@ class TestWhiteboard(TestCase):
             with open(Path(__file__).parent.joinpath("data", "1-ff00_0_111.key"), "r") as f:
                 key = crypto.load_key(f.read())
             # sign with private key
-            data = serialize.offer_specification_serialize_to_bytes(specs)
+            data = serialize.offer_specification_serialize_to_bytes(specs, False)
             specs.signature = crypto.signature_create(key, data)
             # call RPC
             saved_offer = stub.AddOffer(specs)
