@@ -3,7 +3,6 @@ import market_pb2
 
 def offer_fields_serialize_to_bytes(
     iaid: str,
-    is_core:bool,
     notbefore: int,
     notafter: int,
     reachable_paths: str,
@@ -17,7 +16,7 @@ def offer_fields_serialize_to_bytes(
     Fields:
     notbefore, notafter: in seconds from UTC epoch
     """
-    s = "ia:" + iaid + ("1" if is_core else "0") + str(notbefore) + str(notafter) + \
+    s = "ia:" + iaid + str(notbefore) + str(notafter) + \
         "reachable:" + reachable_paths + str(qos_class) + str(price_per_unit) + \
         "profile:" + bw_profile + "br_address_template:" + br_address_template + \
         "br_mtu:" + str(br_mtu) + "br_link_to:" + br_link_to
@@ -27,7 +26,6 @@ def offer_fields_serialize_to_bytes(
 def offer_specification_serialize_to_bytes(s: market_pb2.OfferSpecification) -> bytes:
     return offer_fields_serialize_to_bytes(
         s.iaid,
-        s.is_core,
         s.notbefore.seconds,
         s.notafter.seconds,
         s.reachable_paths,

@@ -19,7 +19,6 @@ class TestTopology(TestCase):
         return Contract(
             offer=OfferSpecification(
                 iaid="1-ff00:0:110",
-                is_core=False,
                 notbefore=conversion.pb_timestamp_from_seconds(1),
                 notafter=conversion.pb_timestamp_from_seconds(3),
                 reachable_paths="*",

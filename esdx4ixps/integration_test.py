@@ -147,7 +147,6 @@ def provider():
         notafter = notbefore + tz.timedelta(seconds=4*BW_PERIOD)
         specs=market_pb2.OfferSpecification(
             iaid="1-ff00:0:110",
-            is_core=True,
             signature=b"",
             notbefore=Timestamp(seconds=int(notbefore.timestamp())),
             notafter=Timestamp(seconds=int(notafter.timestamp())),

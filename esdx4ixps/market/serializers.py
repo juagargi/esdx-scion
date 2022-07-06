@@ -29,7 +29,6 @@ class OfferProtoSerializer(proto_serializers.ProtoSerializer):
 
     id = serializers.IntegerField()
     iaid = serializers.CharField(max_length=32)
-    is_core = serializers.BooleanField()
     notbefore = serializers.DateTimeField()
     notafter = serializers.DateTimeField()
     reachable_paths = serializers.CharField()
@@ -70,7 +69,6 @@ class OfferProtoSerializer(proto_serializers.ProtoSerializer):
     def serialize_to_bytes(self) -> bytes:
         return serialize.offer_fields_serialize_to_bytes(
             self.validated_data["iaid"],
-            self.validated_data["is_core"],
             int(self.validated_data["notbefore"].timestamp()),
             int(self.validated_data["notafter"].timestamp()),
             self.validated_data["reachable_paths"],
@@ -107,7 +105,6 @@ class ContractProtoSerializer(proto_serializers.ModelProtoSerializer):
             contract_signature=base64.standard_b64decode(data["signature_broker"]),
             offer=market_pb2.OfferSpecification(
                 iaid=offer["iaid"],
-                is_core=offer["is_core"],
                 notbefore=conversion.pb_timestamp_from_str(offer["notbefore"]),
                 notafter=conversion.pb_timestamp_from_str(offer["notafter"]),
                 reachable_paths=offer["reachable_paths"],

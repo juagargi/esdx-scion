@@ -19,7 +19,8 @@ class TestOffer(TestCase):
         notbefore = tz.datetime.fromisoformat("2022-04-01T20:00:00.000000+00:00")
         profile = ",".join(["2" for i in range(int(periods))])
         notafter = notbefore + tz.timedelta(seconds=periods*BW_PERIOD)
-        return Offer.objects.create(iaid="1-ff00:0:110", is_core=True, signature=b"",
+        return Offer.objects.create(iaid="1-ff00:0:110",
+                                    signature=b"",
                                     reachable_paths="",
                                     notbefore=notbefore,
                                     notafter=notafter,
@@ -165,7 +166,6 @@ class TestOffer(TestCase):
         t1 = datetime.datetime.utcfromtimestamp(12)
         b = serialize.offer_fields_serialize_to_bytes(
             "1-ff00:0:111",
-            True,
             int(t0.timestamp()),
             int(t1.timestamp()),
             "path1,path2",
@@ -175,7 +175,7 @@ class TestOffer(TestCase):
             "1.1.1.1:42-45",
             1500,
             "PARENT")
-        self.assertEqual(("ia:1-ff00:0:11111112reachable:path1,path21100profile:2,2,2,2"+\
+        self.assertEqual(("ia:1-ff00:0:1111112reachable:path1,path21100profile:2,2,2,2"+\
             "br_address_template:1.1.1.1:42-45br_mtu:1500br_link_to:PARENT").encode("ascii"), b)
 
 

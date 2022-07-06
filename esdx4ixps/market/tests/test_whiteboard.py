@@ -24,7 +24,6 @@ class TestWhiteboard(TestCase):
         for iaid in ["1-ff00:0:110", "1-ff00:0:111", "1-ff00:0:112"]:
             self.offers[iaid] = Offer.objects.create(
                 iaid=iaid,
-                is_core=True,
                 signature=b"1",
                 reachable_paths="",
                 notbefore=notbefore,
@@ -43,7 +42,6 @@ class TestWhiteboard(TestCase):
         msg = serializer.message
         self.assertEqual(offer.id, msg.id)
         self.assertEqual(offer.iaid, msg.specs.iaid)
-        self.assertEqual(offer.is_core, msg.specs.is_core)
         self.assertEqual(int(offer.notbefore.timestamp()), msg.specs.notbefore.seconds)
         self.assertEqual(int(offer.notafter.timestamp()), msg.specs.notafter.seconds)
         self.assertEqual(offer.qos_class, msg.specs.qos_class)
@@ -77,7 +75,6 @@ class TestWhiteboard(TestCase):
             notafter = notbefore + tz.timedelta(seconds=4*BW_PERIOD)
             specs=market_pb2.OfferSpecification(
                 iaid="1-ff00:0:111",
-                is_core=True,
                 notbefore=Timestamp(seconds=int(notbefore.timestamp())),
                 notafter=Timestamp(seconds=int(notafter.timestamp())),
                 reachable_paths="*",
@@ -104,7 +101,6 @@ class TestWhiteboard(TestCase):
             # check original specs
             def compare_offer(o):
                 self.assertEqual(specs.iaid, o.iaid)
-                self.assertEqual(specs.is_core, o.is_core)
                 self.assertEqual(specs.notbefore, conversion.pb_timestamp_from_time(o.notbefore))
                 self.assertEqual(specs.notafter, conversion.pb_timestamp_from_time(o.notafter))
                 self.assertEqual(specs.reachable_paths, o.reachable_paths)
@@ -212,7 +208,6 @@ class TestWhiteboard(TestCase):
             # check values of the offer embedded in the contract
             o = response.offer
             self.assertEqual(o.iaid, po.offer.iaid)
-            self.assertEqual(o.is_core, po.offer.is_core)
             self.assertEqual(o.notbefore, conversion.pb_timestamp_from_time(po.offer.notbefore))
             self.assertEqual(o.notafter, conversion.pb_timestamp_from_time(po.offer.notafter))
             self.assertEqual(o.reachable_paths, po.offer.reachable_paths)
