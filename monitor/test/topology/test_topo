@@ -1,0 +1,155 @@
+#!/bin/bash
+
+SCRIPT_DIR=$(dirname "$(readlink -f "$0")")
+PROJECT_DIR=$(readlink -f "$SCRIPT_DIR/../..")
+
+DOCKER_IMAGE=scion_host:latest
+COMPOSE_FILE=$SCRIPT_DIR/docker-compose.yaml
+COMPOSE_PROJECT=esdx
+
+SCION_ROOT=${SCION_ROOT:="$HOME/scion"}
+SCION_APPS=${SCION_APPS:="$HOME/scion-apps"}
+
+# Export paths so they are visible in the compose file
+export TOPO_DIR=${PWD}
+export SCION_ROOT
+export SCION_APPS
+
+. helper.bash
+
+
+# Build Docker image
+cmd_build_image() {
+    docker build --build-arg SCION_UID=$(id -u $LOGNAME) --build-arg SCION_GID=$(id -g $LOGNAME) \
+    -t "${DOCKER_IMAGE}" ./scion_host
+}
+
+# Create and run the topology
+cmd_run() {
+    if [[ "$(docker images -q ${DOCKER_IMAGE} 2> /dev/null)" == "" ]]; then
+        cmd_build_image
+    fi
+    make -C "$PROJECT_DIR/test/xdp_pass"
+
+    set -e
+    sudo -v
+
+    # Create local topology
+    pushd "$SCION_ROOT"
+    ./scion.sh bazel_remote
+    ./scion.sh topology -c "$SCRIPT_DIR/linear.yaml"
+    popd
+
+    rm -f "$SCION_ROOT/gen/links_ready"
+
+    # Rewrite BR interface IPs
+    set_link_underlay 1-ff00:0:1 10.1.0.1:50000 1-ff00:0:2 10.1.0.4:50000
+    set_link_underlay 1-ff00:0:2 10.1.1.1:50000 1-ff00:0:3 10.1.1.4:50000
+
+    # For convenience: Set scion daemon address to default value
+    for i in {1..3}
+    do
+        set_scion_daemon_address ASff00_0_$i 127.0.0.1:30255
+    done
+
+    # Run topology using docker-compose
+    rm -f "$SCION_ROOT/logs/*"
+    docker-compose -f "$COMPOSE_FILE" -p $COMPOSE_PROJECT up -d
+
+    # Mount network namespaces of the containers
+    mount_netns core_as
+    mount_netns provider_as
+    mount_netns customer_as
+
+    # Create network namespaces for monitors
+    sudo ip netns add upstream
+    sudo ip netns add downstream
+
+    # Create inter-AS links
+    create_veth veth0 core_as 10.1.0.1/24 veth1 upstream 10.1.0.2/24
+    create_veth veth2 upstream 10.1.0.3/24 veth3 provider_as 10.1.0.4/24
+    create_veth veth4 provider_as 10.1.1.1/24 veth5 downstream 10.1.1.2/24
+    create_veth veth6 downstream 10.1.1.3/24 veth7 customer_as 10.1.1.4/24
+
+    # Bridge interfaces in monitor namespaces
+    # sudo ip netns exec upstream ip link add bridge0 type bridge
+    # sudo ip netns exec upstream ip link set veth1 master bridge0
+    # sudo ip netns exec upstream ip link set veth2 master bridge0
+    # sudo ip netns exec upstream ip link set bridge0 up
+    # sudo ip netns exec downstream ip link add bridge1 type bridge
+    # sudo ip netns exec downstream ip link set veth5 master bridge1
+    # sudo ip netns exec downstream ip link set veth6 master bridge1
+    # sudo ip netns exec downstream ip link set bridge1 up
+
+    # Disable checksum offload
+    sudo ip netns exec core_as ethtool --offload veth0 rx off tx off > /dev/null
+    sudo ip netns exec upstream ethtool --offload veth1 rx off tx off > /dev/null
+    sudo ip netns exec upstream ethtool --offload veth2 rx off tx off > /dev/null
+    sudo ip netns exec provider_as ethtool --offload veth3 rx off tx off > /dev/null
+    sudo ip netns exec provider_as ethtool --offload veth4 rx off tx off > /dev/null
+    sudo ip netns exec downstream ethtool --offload veth5 rx off tx off > /dev/null
+    sudo ip netns exec downstream ethtool --offload veth6 rx off tx off > /dev/null
+    sudo ip netns exec customer_as ethtool --offload veth7 rx off tx off > /dev/null
+
+    # Load XDP
+    XDP_PASS="$PROJECT_DIR/test/xdp_pass/xdp_pass.o"
+    sudo ip netns exec core_as ip link set dev veth0 xdp object "$XDP_PASS" section xdp
+    sudo ip netns exec provider_as ip link set dev veth3 xdp object "$XDP_PASS" section xdp
+    sudo ip netns exec provider_as ip link set dev veth4 xdp object "$XDP_PASS" section xdp
+    sudo ip netns exec customer_as ip link set dev veth7 xdp object "$XDP_PASS" section xdp
+
+    cmd_attach_monitors
+
+    # Signal containers to start SCION
+    echo '1' > "$SCION_ROOT/gen/links_ready"
+}
+
+cmd_attach_monitors() {
+    mkdir -p log
+    sudo ip netns exec upstream "$PROJECT_DIR/monitor" -role upstream -i 1 \
+        -up veth1 -down veth2 2> "$SCRIPT_DIR/log/upstream.log" &
+    sudo ip netns exec downstream "$PROJECT_DIR/monitor" -role downstream -i 1 \
+        -up veth5 -down veth6 2> "$SCRIPT_DIR/log/downstream.log" &
+}
+
+cmd_enter() {
+    docker exec -it $1 bash -l
+}
+
+cmd_stop() {
+    # Stop ESDX monitors
+    sudo pkill monitor
+
+    # Delete Docker containers and networks
+    docker-compose -f "$COMPOSE_FILE" -p "$COMPOSE_PROJECT" down
+
+    # Delete namespaces
+    sudo ip netns delete upstream
+    sudo ip netns delete downstream
+
+    umount_netns core_as
+    umount_netns provider_as
+    umount_netns customer_as
+}
+
+cmd_clean() {
+    rm -rf ./log
+    rm -rf $SCION_ROOT/gen* $SCION_ROOT/logs $SCION_ROOT/traces
+}
+
+HELP_MESSAGE="Usage: ./test_topo <command>
+Commands:
+  - build_image     : Build the SCION Docker image
+  - run             : Run the topology
+  - attach_monitors : Reattach monitors (detach with 'sudo pkill monitor')
+  - enter <cnt>     : Start an interactive shell in the given container
+  - stop            : Stop the topology and remove the containers and networks
+  - clean           : Delete generated files and logs"
+
+COMMAND=$1
+shift
+case "$COMMAND" in
+    build_image|run|attach_monitors|stop|clean|enter)
+        "cmd_$COMMAND" "$@" ;;
+    *) echo "$HELP_MESSAGE"; exit 1 ;;
+esac

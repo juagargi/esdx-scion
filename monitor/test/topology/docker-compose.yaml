@@ -1,0 +1,39 @@
+version: '3.6'
+
+services:
+  core:
+    image: scion_host:latest
+    container_name: core_as
+    environment:
+      - SUPERVISOR_PROCESS_GROUP=as1-ff00_0_1
+    volumes:
+      - ${SCION_ROOT:?}/bin:/home/scion/scion/bin:ro
+      - ${SCION_APPS:?}/bin:/home/scion/scion-apps/bin:ro
+      - ${SCION_ROOT:?}/gen:/home/scion/scion/gen:ro
+      - ${SCION_ROOT:?}/gen-cache:/home/scion/scion/gen-cache
+      - ${SCION_ROOT:?}/gen-certs:/home/scion/scion/gen-certs
+      - ${SCION_ROOT:?}/logs:/home/scion/scion/logs
+  provider:
+    image: scion_host:latest
+    container_name: provider_as
+    environment:
+      - SUPERVISOR_PROCESS_GROUP=as1-ff00_0_2
+    volumes:
+      - ${SCION_ROOT:?}/bin:/home/scion/scion/bin:ro
+      - ${SCION_APPS:?}/bin:/home/scion/scion-apps/bin:ro
+      - ${SCION_ROOT:?}/gen:/home/scion/scion/gen:ro
+      - ${SCION_ROOT:?}/gen-cache:/home/scion/scion/gen-cache
+      - ${SCION_ROOT:?}/gen-certs:/home/scion/scion/gen-certs
+      - ${SCION_ROOT:?}/logs:/home/scion/scion/logs
+  customer:
+    image: scion_host:latest
+    container_name: customer_as
+    environment:
+      - SUPERVISOR_PROCESS_GROUP=as1-ff00_0_3
+    volumes:
+      - ${SCION_ROOT:?}/bin:/home/scion/scion/bin:ro
+      - ${SCION_APPS:?}/bin:/home/scion/scion-apps/bin:ro
+      - ${SCION_ROOT:?}/gen:/home/scion/scion/gen:ro
+      - ${SCION_ROOT:?}/gen-cache:/home/scion/scion/gen-cache
+      - ${SCION_ROOT:?}/gen-certs:/home/scion/scion/gen-certs
+      - ${SCION_ROOT:?}/logs:/home/scion/scion/logs
