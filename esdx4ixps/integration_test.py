@@ -13,7 +13,6 @@
 
 from django.utils import timezone as tz
 from google.protobuf.timestamp_pb2 import Timestamp
-from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from defs import BW_PERIOD
 from util.conversion import pb_timestamp_from_time
@@ -21,6 +20,7 @@ from util.standalone import run_django
 from util import crypto
 from util import serialize
 from util.experiments import Runner
+from util.test import test_data
 
 import sys
 import time
@@ -80,12 +80,10 @@ class Client:
     def run(self):
         # load key
         iafile = self.ia.replace(":", "_")
-        with open(Path(__file__).parent.joinpath("market", "tests",\
-            "data", iafile + ".key"), "r") as f:
+        with open(test_data(iafile + ".key"), "r") as f:
             self.key = crypto.load_key(f.read())
         # load broker's certificate
-        with open(Path(__file__).parent.joinpath("market", "tests",\
-            "data", "broker.crt"), "r") as f:
+        with open(test_data("broker.crt"), "r") as f:
             self.broker_cert = crypto.load_certificate(f.read())
         # buy
         with grpc.insecure_channel('localhost:50051') as channel:
@@ -133,8 +131,7 @@ def provider():
             br_mtu=1500,
             br_link_to="PARENT",
         )
-        with open(Path(__file__).parent.joinpath("market", "tests", "data",
-            "1-ff00_0_110.key"), "r") as f:
+        with open(test_data("1-ff00_0_110.key"), "r") as f:
             key = crypto.load_key(f.read())
         # sign with private key
         data = serialize.offer_specification_serialize_to_bytes(specs, False)

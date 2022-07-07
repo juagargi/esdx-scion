@@ -1,9 +1,10 @@
 from django.test import TestCase
 from django.core.exceptions import ValidationError
-from util.conversion import ia_validator, ia_str_to_int
 from pathlib import Path
 from market.models.ases import AS
 from util import crypto
+from util.conversion import ia_validator, ia_str_to_int
+from util.test import test_data
 
 
 class TestConversions(TestCase):
@@ -58,10 +59,10 @@ class TestSignatures(TestCase):
     fixtures = ["testdata"]
     def test_create_signature(self):
         # load private key
-        with open(Path(__file__).parent.joinpath("data", "broker.key"), "r") as f:
+        with open(test_data("broker.key"), "r") as f:
             key = crypto.load_key(f.read())
         # load certificate
-        with open(Path(__file__).parent.joinpath("data", "broker.crt"), "r") as f:
+        with open(test_data("broker.crt"), "r") as f:
             cert = crypto.load_certificate(f.read())
         # sign something
         data = "hello world".encode("ascii")
@@ -88,7 +89,7 @@ class TestSignatures(TestCase):
 
     def test_validate_with_as(self):
         # load private key
-        with open(Path(__file__).parent.joinpath("data", "1-ff00_0_111.key"), "r") as f:
+        with open(test_data("1-ff00_0_111.key"), "r") as f:
             key = crypto.load_key(f.read())
         # get certificate from AS
         cert = crypto.load_certificate(AS.objects.get(iaid="1-ff00:0:111").certificate_pem)

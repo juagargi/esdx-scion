@@ -12,6 +12,7 @@ from market import services
 from util import conversion
 from util import crypto
 from util import serialize
+from util.test import test_data
 
 import market_pb2, market_pb2_grpc
 
@@ -86,7 +87,7 @@ class TestWhiteboard(TestCase):
                 br_link_to="PARENT",
             )
             # load private key
-            with open(Path(__file__).parent.joinpath("data", "1-ff00_0_111.key"), "r") as f:
+            with open(test_data("1-ff00_0_111.key"), "r") as f:
                 key = crypto.load_key(f.read())
             # sign with private key
             data = serialize.offer_specification_serialize_to_bytes(specs, False)
@@ -128,7 +129,7 @@ class TestWhiteboard(TestCase):
             matched_offer = next(iter(self.offers.values()))
             starting_on = matched_offer.notbefore
             # create a signature for the purchase order
-            with open(Path(__file__).parent.joinpath("data", "1-ff00_0_112.key"), "r") as f:
+            with open(test_data("1-ff00_0_112.key"), "r") as f:
                 key = crypto.load_key(f.read()) # load private key
             signature = sign_purchase_order(
                 key,
@@ -165,7 +166,7 @@ class TestWhiteboard(TestCase):
         def get_contract_request(ia:str, contract_id: int) -> market_pb2.GetContractRequest:
             """create the get contract request"""
             # create a signature for the get contract request
-            with open(Path(__file__).parent.joinpath("data", ia.replace(":", "_")+".key"), "r") as f:
+            with open(test_data(ia.replace(":", "_")+".key"), "r") as f:
                 key = crypto.load_key(f.read()) # load private key
             signature = sign_get_contract_request(
                 key,

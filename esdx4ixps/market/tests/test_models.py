@@ -9,6 +9,7 @@ from market.purchases import purchase_offer, find_available_br_address
 from pathlib import Path
 from util import crypto
 from util import serialize
+from util.test import test_data
 
 import datetime
 
@@ -217,7 +218,7 @@ class TestFindFreeBRAddress(TestCase):
     fixtures = ["testdata"]
     def setUp(self):
         # load private key for 111
-        with open(Path(__file__).parent.joinpath("data", "1-ff00_0_111.key"), "r") as f:
+        with open(test_data("1-ff00_0_111.key"), "r") as f:
             self.key = crypto.load_key(f.read())
         self.br_template = "1.1.1.1:10-12"
 
