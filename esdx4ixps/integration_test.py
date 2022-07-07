@@ -20,6 +20,7 @@ from util.conversion import pb_timestamp_from_time
 from util.standalone import run_django
 from util import crypto
 from util import serialize
+from util.experiments import Runner
 
 import sys
 import time
@@ -141,6 +142,7 @@ def provider():
         # do RPC
         saved = stub.AddOffer(specs)
         print(f"provider created offer with id {saved.id}")
+    return 0
 
 
 def client(ia: str, wait: int):
@@ -149,26 +151,20 @@ def client(ia: str, wait: int):
 
 
 def main():
-    django = run_django()
-    provider()
-    with ThreadPoolExecutor() as executor:
-        tasks = [
-            executor.submit(client, "1-ff00:0:111", 1),
-            executor.submit(client, "1-ff00:0:112", 0),
-        ]
-    res = 0
-    for t in tasks:
-        result = t.result()
-        if result != 0:
-            res = 1
-    django.terminate()
-    try:
-        django.wait(timeout=1)
-    finally:
-        django.terminate()
-        django.kill()
-    print(f"done (exits with {res})")
-    return res
+    r = Runner(
+        "localhost:50051",
+        provider,
+        [(),],
+        client,
+        [
+            ("1-ff00:0:111", 0.2),
+            ("1-ff00:0:112", 0),
+        ],
+    )
+    ret = r.run()
+    print(f"done (exits with {ret})")
+    return ret
+
 
 
 if __name__ == "__main__":
