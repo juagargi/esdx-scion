@@ -17,19 +17,15 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from defs import BW_PERIOD
 from util.conversion import pb_timestamp_from_time
+from util.standalone import run_django
 from util import crypto
 from util import serialize
 
 import sys
-import os
-import subprocess
 import time
 import grpc
 import market_pb2
 import market_pb2_grpc
-
-import signal
-import ctypes
 
 
 class Client:
@@ -116,30 +112,6 @@ class Client:
 
         self.stub = None
         return 0
-
-
-
-def run_django():
-    if os.path.exists("db.sqlite3"):
-        os.remove("db.sqlite3")
-    p = subprocess.Popen(["./manage.py", "migrate"], stdout=subprocess.DEVNULL)
-    p.wait()
-    p = subprocess.Popen(
-        ["./manage.py", "loaddata", "./market/fixtures/testdata.yaml"],
-        stdout=subprocess.DEVNULL)
-    p.wait()
-
-    # from https://stackoverflow.com/questions/19447603/how-to-kill-a-python-child-process-\
-    # created-with-subprocess-check-output-when-t/19448096#19448096
-    libc = ctypes.CDLL("libc.so.6")
-    def set_pdeathsig(sig = signal.SIGTERM):
-        def callable():
-            return libc.prctl(1, sig)
-        return callable
-    p = subprocess.Popen(["./manage.py", "grpcrunserver"],
-        preexec_fn=set_pdeathsig(signal.SIGTERM))
-    time.sleep(1)
-    return p
 
 
 def provider():
