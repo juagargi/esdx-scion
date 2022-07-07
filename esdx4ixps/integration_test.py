@@ -153,8 +153,8 @@ def main():
     provider()
     with ThreadPoolExecutor() as executor:
         tasks = [
-            executor.submit(lambda: client("1-ff00:0:111", 1)),
-            executor.submit(lambda: client("1-ff00:0:112", 0)),
+            executor.submit(client, "1-ff00:0:111", 1),
+            executor.submit(client, "1-ff00:0:112", 0),
         ]
     res = 0
     for t in tasks:
