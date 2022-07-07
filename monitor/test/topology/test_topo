@@ -106,9 +106,9 @@ cmd_run() {
 
 cmd_attach_monitors() {
     mkdir -p log
-    sudo ip netns exec upstream "$PROJECT_DIR/monitor" -role upstream -i 1 \
+    sudo ip netns exec upstream "$PROJECT_DIR/monitor" -role upstream -ports 50000:50100 -i 5 \
         -up veth1 -down veth2 2> "$SCRIPT_DIR/log/upstream.log" &
-    sudo ip netns exec downstream "$PROJECT_DIR/monitor" -role downstream -i 1 \
+    sudo ip netns exec downstream "$PROJECT_DIR/monitor" -role downstream -ports 50000:50100 -i 5 \
         -up veth5 -down veth6 2> "$SCRIPT_DIR/log/downstream.log" &
 }
 

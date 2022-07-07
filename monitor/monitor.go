@@ -60,7 +60,7 @@ func parse_args() (Config, error) {
 	var conf Config
 	var role = flag.String("role", "",
 		"[upstream|downstream] (Required) Position of the monitor relative to the provider AS.")
-	var ports = flag.String("ports", "50000:50100",
+	var ports = flag.String("ports", "30042-30051",
 		"Underlay ports used by SCION. Given as a colon-separated range of first and last port"+
 			" (both inclusive).")
 	var up_port_name = flag.String("up", "",
@@ -177,7 +177,7 @@ func detachXdp(iface *net.Interface) {
 // Look up 'key' in the 'counters' per-CPU LRU hash map and return the sum of all per-CPU counters.
 func read_percpu_counters(counters *ebpf.Map, key interface{}) (EsdxCounter, error) {
 	var total EsdxCounter
-	var per_cpu_values = make([]EsdxCounter, 16)
+	var per_cpu_values = make([]EsdxCounter, 0)
 	if err := counters.Lookup(key, &per_cpu_values); err != nil {
 		return total, err
 	}

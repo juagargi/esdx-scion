@@ -222,7 +222,7 @@ static inline void report_new_hop(u32 hop)
     if (buf)
     {
         memcpy(buf, &hop, sizeof(u32));
-        bpf_ringbuf_submit(buf, BPF_RB_FORCE_WAKEUP);
+        bpf_ringbuf_submit(buf, 0);
     }
 }
 
