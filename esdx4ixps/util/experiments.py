@@ -1,5 +1,6 @@
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
+# from django.utils import timezone as tz
 from google.protobuf.timestamp_pb2 import Timestamp
 from pathlib import Path
 from util import conversion
@@ -79,7 +80,7 @@ class MarketClient:
             return stub.AddOffer(offer)
 
     def create_simplified_offer(self, bw_profile) -> market_pb2.OfferSpecification:
-        notbefore = Timestamp(seconds=int(datetime.now().timestamp()))
+        notbefore = conversion.pb_timestamp_from_time(datetime.now())
         notafter = Timestamp(
             seconds=notbefore.seconds + (len(bw_profile.split(",")) * defs.BW_PERIOD))
         specs = market_pb2.OfferSpecification(
@@ -99,10 +100,11 @@ class MarketClient:
         with grpc.insecure_channel(self.service_address) as channel:
             stub = market_pb2_grpc.MarketControllerStub(channel)
             response = stub.ListOffers(market_pb2.ListRequest())
-        offers = [o for o in response]
+            offers = [o for o in response]
         return offers
 
     def buy_offer(self, offer: market_pb2.Offer, bw_profile, starting_on):
+        """ returns the contract """
         # verify broker's signature
         offer_bytes = serialize.offer_serialize_to_bytes(offer, False)
         crypto.signature_validate(self.broker_cert, offer.specs.signature, offer_bytes)
@@ -124,3 +126,18 @@ class MarketClient:
         with grpc.insecure_channel(self.service_address) as channel:
             stub = market_pb2_grpc.MarketControllerStub(channel)
             return stub.Purchase(request)
+
+    def get_contract(self, contract_id: int) -> market_pb2.Contract:
+        data = serialize.get_contract_request_serialize(
+            contract_id=contract_id,
+            requester_iaid=self.ia,
+            signature=None,
+        )
+        request = market_pb2.GetContractRequest(
+            contract_id=contract_id,
+            requester_iaid=self.ia,
+            requester_signature=crypto.signature_create(self.key, data),
+        )
+        with grpc.insecure_channel(self.service_address) as channel:
+            stub = market_pb2_grpc.MarketControllerStub(channel)
+            return stub.GetContract(request)
