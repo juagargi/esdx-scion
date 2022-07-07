@@ -11,6 +11,7 @@
 # The test exits with 0 if okay, non zero otherwise.
 
 
+from pickletools import markobject
 from django.utils import timezone as tz
 from google.protobuf.timestamp_pb2 import Timestamp
 from pathlib import Path
@@ -19,7 +20,7 @@ from util.conversion import pb_timestamp_from_time
 from util.standalone import run_django
 from util import crypto
 from util import serialize
-from util.experiments import Runner
+from util.experiments import Runner, MarketClient
 from util.test import test_data
 
 import sys
@@ -54,7 +55,8 @@ class Client:
             buyer_iaid=self.ia,
             signature=b"",
             bw_profile="1,1,1,1",
-            starting_on=pb_timestamp_from_time(tz.datetime.fromisoformat("2022-04-01T20:00:00.000000+00:00")))
+            starting_on=offer.specs.notbefore,
+        )
         # sign the purchase request
         data = serialize.purchase_order_fields_serialize_to_bytes(
             offerbytes,
@@ -114,31 +116,10 @@ class Client:
 
 
 def provider():
-    with grpc.insecure_channel('localhost:50051') as channel:
-        stub = market_pb2_grpc.MarketControllerStub(channel)
-        notbefore = tz.datetime.fromisoformat("2022-04-01T20:00:00.000000+00:00")
-        notafter = notbefore + tz.timedelta(seconds=4*BW_PERIOD)
-        specs=market_pb2.OfferSpecification(
-            iaid="1-ff00:0:110",
-            signature=b"",
-            notbefore=Timestamp(seconds=int(notbefore.timestamp())),
-            notafter=Timestamp(seconds=int(notafter.timestamp())),
-            reachable_paths="*",
-            qos_class=1,
-            price_per_unit=0.000000001,
-            bw_profile="2,2,2,2",
-            br_address_template="10.1.1.1:50000-50100",
-            br_mtu=1500,
-            br_link_to="PARENT",
-        )
-        with open(test_data("1-ff00_0_110.key"), "r") as f:
-            key = crypto.load_key(f.read())
-        # sign with private key
-        data = serialize.offer_specification_serialize_to_bytes(specs, False)
-        specs.signature = crypto.signature_create(key, data)
-        # do RPC
-        saved = stub.AddOffer(specs)
-        print(f"provider created offer with id {saved.id}")
+    p = MarketClient("1-ff00:0:110", "localhost:50051")
+    o = p.create_simplified_offer("2,2,2,2")
+    saved = p.sell_offer(o)
+    print(f"provider created offer with id {saved.id}")
     return 0
 
 
@@ -149,7 +130,6 @@ def client(ia: str, wait: int):
 
 def main():
     r = Runner(
-        "localhost:50051",
         provider,
         [(),],
         client,
