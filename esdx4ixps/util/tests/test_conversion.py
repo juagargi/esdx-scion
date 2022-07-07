@@ -1,3 +1,4 @@
+from datetime import datetime
 from ipaddress import ip_address
 from unittest import TestCase
 from util import conversion
@@ -148,3 +149,16 @@ class TestIPConversion(TestCase):
                     )
                 else:
                     got_ip, got_min_port, got_max_port = conversion.ip_port_range_from_str(s)
+
+
+class TestTimeConversion(TestCase):
+    def test_pb_timestamp_from_seconds(self):
+        t = conversion.pb_timestamp_from_seconds(0)
+        self.assertEqual(t.seconds, 0)
+        t = conversion.pb_timestamp_from_seconds(42)
+        self.assertEqual(t.seconds, 42)
+
+    def test_time_from_pb_timestamp(self):
+        ts = conversion.pb_timestamp_from_seconds(123456789)
+        t = conversion.time_from_pb_timestamp(ts)
+        self.assertEqual(int(t.timestamp()), ts.seconds)

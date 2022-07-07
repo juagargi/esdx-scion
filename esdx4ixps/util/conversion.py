@@ -18,11 +18,12 @@ def time_from_str(s: str):
 
 
 def time_from_pb_timestamp(timestamp):
-    t = tz.datetime.fromtimestamp(timestamp.seconds + timestamp.nanos / 1e9)
-    return t.replace(tzinfo=pytz.utc)
+    return tz.datetime.fromtimestamp(timestamp.seconds + timestamp.nanos / 1e9).astimezone(tz.utc)
+
 
 def pb_timestamp_from_seconds(s: int):
     return Timestamp(seconds=s)
+
 
 def pb_timestamp_from_time(time):
     return pb_timestamp_from_seconds(int(time.timestamp()))
@@ -100,12 +101,14 @@ def _ip_and_string_from_str(s:str) -> Tuple[Union[IPv4Address, IPv6Address], str
         ip = IPv6Address(addr)
     return ip, parts[1]
 
+
 def ip_port_from_str(s: str) -> Tuple[Union[IPv4Address, IPv6Address], int]:
     ip, port = _ip_and_string_from_str(s)
     port = int(port)
     if port < 0 or port > 65534:
         raise ValueError(f"invalid address {s}")
     return (ip, port)
+
 
 def ip_port_range_from_str(s: str) -> Tuple[Union[IPv4Address, IPv6Address], int, int]:
     """ returns the IP, the min port and the max port """
@@ -117,6 +120,7 @@ def ip_port_range_from_str(s: str) -> Tuple[Union[IPv4Address, IPv6Address], int
     if max > 65534:
         raise ValueError(f"invalid port range in {s} (max out of range)")
     return ip, min, max
+
 
 def ip_port_to_str(ip: Union[IPv4Address,IPv6Address], port: int) -> str:
     ip = f"[{ip}]" if ip.version == 6 else f"{ip}"
