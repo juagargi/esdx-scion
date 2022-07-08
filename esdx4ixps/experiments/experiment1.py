@@ -13,10 +13,9 @@ import time
 import grpc
 
 
-
 def provider(ia: str):
     p = MarketClient(ia, "localhost:50051")
-    o = p.create_simplified_offer("20")
+    o = p.create_simplified_offer("20000")
     saved = p.sell_offer(o)
     print(f"provider created offer with id {saved.id}")
     return 0
@@ -35,11 +34,13 @@ def client(ia: str, wait: int):
                 starting_on=conversion.time_from_pb_timestamp(offers[0].specs.notbefore),
             )
             # print(f"Client with ID: {ia} got contract with ID: {pb_contract.contract_id}")
+            sys.stdout.write(".")
+            sys.stdout.flush()
             break
         except grpc.RpcError as ex:
             # print(f"Client with ID: {ia} could not buy: {ex.details()}")
             continue
-    if pb_contract is None :
+    if pb_contract is None:
         print(f"Client with ID: {ia} too many attempts")
         return 1
     # unnecessary, but check the contract obtained independently
@@ -61,16 +62,14 @@ def experiment1(N: int) -> float:
         client,
         [("1-ff00:0:111", 0,)] * N,
     )
-    t0 = time.time()
-    ret = r.run()
-    t1 = time.time()
+    ret = r.run(True)
     if ret != 0:
         raise RuntimeError(f"experiment1 failed with {ret} for N = {N}")
-    return t1 - t0
+    return r.timings["after_execution"] - r.timings["before_execution"]
 
 def main():
     results = {}
-    for i in range(1, 10, 2):
+    for i in range(0, 101, 10):
         results[i] = experiment1(i)
         print(f"-------------------------- done {i}")
     print(f"done")
