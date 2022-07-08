@@ -1,5 +1,7 @@
 syntax = "proto3";
 
+option go_package = "esdx_scion/market";
+
 package market;
 
 import "google/protobuf/timestamp.proto";
