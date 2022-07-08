@@ -23,7 +23,7 @@ class Runner:
         sellers_data,  # list of len(sellers) tuples, each with the parameters for seller_fcn
         buyer_fcn,  # the function to execute per buyer
         buyers_data,  # list of len(buyers) tuples, each with the parameters for buyer_fcn
-        ):
+    ):
         """
         data_sellers: list of len(sellers) elements, each consisting on the arguments to the sellers function
         """
@@ -31,9 +31,17 @@ class Runner:
         self.sellers_data = sellers_data
         self.buyer_fcn = buyer_fcn
         self.buyers_data = buyers_data
+        self.timings = { # times for certain events
+            "start": None,  # right after run starts
+            "before_execution": None,  # before the execution of the sellers and buyers
+            "after_execution": None,  # after the sellers and buyers have finished
+            "end": None,  # right before returning from run
+        }
 
-    def run(self):
-        django = run_django()
+    def run(self, flush_all_data: bool):
+        self.timings["start"] = time.time()
+        django = run_django(flush_all_data)
+        self.timings["before_execution"] = time.time()
         tasks = []
         with ThreadPoolExecutor() as executor:
             # launch sellers
@@ -50,10 +58,12 @@ class Runner:
             result = t.result()
             if result != 0:
                 res = 1
+        self.timings["after_execution"] = time.time()
         try:
             django.terminate()
         finally:
             django.kill()
+        self.timings["end"] = time.time()
         return res
 
 

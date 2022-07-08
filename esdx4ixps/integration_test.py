@@ -44,7 +44,7 @@ def client(ia: str, wait: int):
         except grpc.RpcError as ex:
             print(f"Client with ID: {ia} could not buy: {ex.details()}")
             continue
-    if pb_contract is None :
+    if pb_contract is None:
         print(f"Client with ID: {ia} too many attempts")
         return 1
     # unnecessary, but check the contract obtained independently
@@ -67,7 +67,7 @@ def main():
             ("1-ff00:0:112", 0),
         ],
     )
-    ret = r.run()
+    ret = r.run(True)
     print(f"done (exits with {ret})")
     return ret
 

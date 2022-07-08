@@ -36,3 +36,19 @@ And then run
 make test
 make integration
 ```
+
+## Mysql
+
+apt packages:
+
+- libmysqlclient-dev
+- python3-dev
+
+pip packages:
+- mysqlclient
+
+Don't forget to create the DB:
+```sql
+DROP SCHEMA IF EXISTS djangodatabase;
+CREATE SCHEMA djangodatabase;
+```

@@ -5,9 +5,13 @@ import subprocess
 import time
 
 
-def run_django():
-    if os.path.exists("db.sqlite3"):
-        os.remove("db.sqlite3")
+def run_django(flush_all_data: bool):
+    if flush_all_data:
+        if os.path.exists("db.sqlite3"):
+            os.remove("db.sqlite3")
+        p = subprocess.Popen(
+            ["./manage.py", "flush", "--noinput"], stdout=subprocess.DEVNULL)
+        p.wait()
     p = subprocess.Popen(["./manage.py", "migrate"], stdout=subprocess.DEVNULL)
     p.wait()
     p = subprocess.Popen(

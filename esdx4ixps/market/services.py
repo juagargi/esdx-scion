@@ -37,6 +37,7 @@ class MarketService(Service):
             grpc_offer.is_valid(raise_exception=True)
             with transaction.atomic():
                 offer = grpc_offer.save() # only creates an instance without saving it to the DB
+                offer.id = None  # ensure this will be a new offer
                 offer.validate_signature_from_seller()
                 offer.save() # store the original offer
                 new_offer = copy.deepcopy(offer)

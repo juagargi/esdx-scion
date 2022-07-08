@@ -21,5 +21,5 @@ integration:
 	@./tools/integration_tests.sh
 
 migration_replace:
-	@rm market/migrations/0001_initial.py
+	@rm -f market/migrations/0001_initial.py
 	@./manage.py makemigrations market
