@@ -1,4 +1,6 @@
-.PHONY: protobuf, test, integration
+.PHONY: all protobuf, test, integration
+
+all:
 
 protobuf:
 	@./tools/make_protobuf.sh
