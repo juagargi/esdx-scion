@@ -38,6 +38,7 @@ class PurchaseOrder(models.Model):
         offerbytes = self.offer.serialize_to_bytes(True)
         return serialize.purchase_order_fields_serialize_to_bytes(
             offerbytes,
+            self.buyer.iaid,
             self.bw_profile,
             int(self.starting_on.timestamp())
         )

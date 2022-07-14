@@ -129,6 +129,7 @@ class MarketClient:
         # sign the purchase request
         data = serialize.purchase_order_fields_serialize_to_bytes(
             offer_bytes,
+            self.ia,
             request.bw_profile,
             request.starting_on.ToSeconds()
         )

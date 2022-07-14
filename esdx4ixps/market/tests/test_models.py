@@ -228,6 +228,7 @@ class TestFindFreeBRAddress(TestCase):
         offer_bytes = offer.serialize_to_bytes(True)
         data = serialize.purchase_order_fields_serialize_to_bytes(
             offer_bytes,
+            "1-ff00:0:111",
             bw_profile,
             int(starting_on.timestamp()),
         )

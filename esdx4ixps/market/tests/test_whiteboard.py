@@ -132,6 +132,7 @@ class TestWhiteboard(TestCase):
             with open(test_data("1-ff00_0_112.key"), "r") as f:
                 key = crypto.load_key(f.read()) # load private key
             signature = sign_purchase_order(
+                "1-ff00:0:112",
                 key,
                 matched_offer,
                 starting_on,

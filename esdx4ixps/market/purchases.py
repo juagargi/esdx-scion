@@ -72,15 +72,17 @@ def purchase_offer(offer: Offer,
 
 
 def sign_purchase_order(
+    buyer_ia: str,
     buyer_key: rsa.RSAPrivateKey,
     o: Offer,
     starting_on: datetime,
     bw_profile: str) -> str:
     """ creates a signature for the fields of a purchase order """
     data = serialize.purchase_order_fields_serialize_to_bytes(
-        o.serialize_to_bytes(True),
-        bw_profile,
-        int(starting_on.timestamp())
+        offer_bytes=o.serialize_to_bytes(True),
+        ia_id=buyer_ia,
+        bw_profile=bw_profile,
+        starting_on=int(starting_on.timestamp())
     )
     return crypto.signature_create(buyer_key, data)
 
