@@ -25,6 +25,9 @@ class Command(BaseCommand):
                 Broker.objects.all().delete()
             if options["create"]:
                 print("creating ...")
+                if Broker.objects.count() != 0:
+                    print(f"There already exists one (or more) broker(s): cannot create")
+                    sys.exit(1)
                 key = crypto.create_key()
                 subj = issuer = crypto.create_x509_name("CH", "Netsec", "ETH", "broker")
                 cert = crypto.create_certificate(
@@ -40,7 +43,7 @@ class Command(BaseCommand):
                 print("exporting ...")
                 b = Broker.objects.all()
                 if b.count() != 1:
-                    print(f"One broker needed, found {b.count()}")
+                    print(f"error: one broker needed, found {b.count()}")
                     sys.exit(1)
                 b = b.first()
                 with open("broker.crt", "w") as f:

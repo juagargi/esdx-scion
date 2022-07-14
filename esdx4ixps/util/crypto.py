@@ -33,7 +33,7 @@ def create_x509_name(
     ])
 
 
-def create_key(key_size: int=2048) ->rsa.RSAPrivateKey:
+def create_key(key_size: int=4096) ->rsa.RSAPrivateKey:
     return rsa.generate_private_key(
         public_exponent=65537,
         key_size=key_size,
@@ -67,12 +67,13 @@ def certificate_to_pem(cert: x509.Certificate) -> str:
 
 
 def key_to_pem(key: rsa.RSAPrivateKey, password: bytes = None) -> str:
+    """ PKCS#8 (defines version, algorithm, and key) """
     algo = serialization.BestAvailableEncryption(password) if password is not None \
         else serialization.NoEncryption()
 
     return key.private_bytes(
         encoding=serialization.Encoding.PEM,
-        format=serialization.PrivateFormat.TraditionalOpenSSL,
+        format=serialization.PrivateFormat.PKCS8,
         encryption_algorithm=algo,
     ).decode("ascii")
 
