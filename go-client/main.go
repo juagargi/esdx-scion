@@ -2,16 +2,15 @@ package main
 
 import (
 	"context"
-	"encoding/hex"
 	"flag"
 	"fmt"
 	"io"
 	"log"
-	"os"
 	"time"
 
 	"esdx_scion/crypto"
 	pb "esdx_scion/market"
+	"esdx_scion/serialize"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -30,35 +29,21 @@ func main() {
 	defer conn.Close()
 
 	fmt.Println("hello there")
+
 	// load key
-	data := []byte("hello")
 	key, err := crypto.LoadKey("../test_data/1-ff00_0_111.key")
 	if err != nil {
 		log.Fatalf("loading key: %v", err)
 	}
-	signature, err := key.Sign(data)
+	certBroker, err := crypto.LoadCert("../test_data/broker.crt")
 	if err != nil {
-		log.Fatalf("cannot sign: %v", err)
+		log.Fatalf("loading broker certificate: %v", err)
 	}
-	fmt.Println(hex.EncodeToString(signature))
 
-	// prepare data
-	// create signature
-
-	//
-	//
-	//
-	//
-	//
-	//
-	//
-	if 4%5 != 0 {
-		os.Exit(0)
-	}
 	c := pb.NewMarketControllerClient(conn)
 	r, err := c.ListOffers(ctx, &pb.ListRequest{})
 	if err != nil {
-		log.Fatalf("not listening: %v", err)
+		log.Fatalf("not listing: %v", err)
 	}
 	offers := make([]*pb.Offer, 0)
 	for {
@@ -80,9 +65,20 @@ func main() {
 		BwProfile:  "1",
 		Signature:  []byte{},
 	}
+	// prepare data
+	data := serialize.SerializePurchaseOrder(req)
+	// fmt.Printf("deleteme purchase order serialized: %s\n", hex.EncodeToString(data))
+	// create signature
+	signature, err := key.Sign(data)
+	if err != nil {
+		log.Fatalf("cannot sign purchaser order: %v", err)
+	}
+	req.Signature = signature
+
 	contract, err := c.Purchase(ctx, req)
 	if err != nil {
 		log.Fatalf("buying offer: %v", err)
 	}
+	_ = certBroker
 	_ = contract
 }

@@ -18,7 +18,7 @@ def offer_fields_serialize_to_bytes(
     notbefore, notafter: in seconds from UTC epoch
     """
     s = "ia:" + iaid + str(notbefore) + str(notafter) + \
-        "reachable:" + reachable_paths + str(qos_class) + str(price_per_unit) + \
+        "reachable:" + reachable_paths + str(qos_class) + "{:e}".format(price_per_unit) + \
         "profile:" + bw_profile + "br_address_template:" + br_address_template + \
         "br_mtu:" + str(br_mtu) + "br_link_to:" + br_link_to + "signature:"
     return s.encode("ascii") + signature

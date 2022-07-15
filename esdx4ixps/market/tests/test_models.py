@@ -178,7 +178,7 @@ class TestOffer(TestCase):
             "PARENT",
             b"",
         )
-        self.assertEqual(("ia:1-ff00:0:1111112reachable:path1,path21100profile:2,2,2,2"+\
+        self.assertEqual(("ia:1-ff00:0:1111112reachable:path1,path211.000000e+02profile:2,2,2,2"+\
             "br_address_template:1.1.1.1:42-45br_mtu:1500br_link_to:PARENTsignature:").encode("ascii"), b)
 
 
