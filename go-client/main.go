@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"os"
 	"time"
 
 	"esdx_scion/crypto"
@@ -17,6 +18,10 @@ import (
 )
 
 func main() {
+	os.Exit(mainFunc())
+}
+
+func mainFunc() int {
 	ctx, cancelF := context.WithTimeout(context.Background(), 10*time.Minute)
 	defer cancelF()
 
@@ -79,6 +84,10 @@ func main() {
 	if err != nil {
 		log.Fatalf("buying offer: %v", err)
 	}
-	_ = certBroker
-	_ = contract
+	data = serialize.SerializeContract(contract)
+	err = certBroker.VerifySignature(data, contract.ContractSignature)
+	if err != nil {
+		log.Fatalf("contract signature: %v", err)
+	}
+	return 0
 }

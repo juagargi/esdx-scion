@@ -23,12 +23,29 @@ func SerializeOfferSpecification(o *pb.OfferSpecification) []byte {
 	return append([]byte(s), o.Signature...)
 }
 
+// SerializePurchaseOrder serializes a PurchaseRequest (not its signature).
 func SerializePurchaseOrder(o *pb.PurchaseRequest) []byte {
 	return serializePairs(
 		"offer:", SerializeOfferSpecification(o.Offer.Specs),
 		"bw_profile:", []byte(o.BwProfile),
 		"buyer:", []byte(o.BuyerIaid),
 		"starting_on:", []byte(strconv.FormatInt(o.StartingOn.Seconds, 10)),
+	)
+}
+
+func SerializeContract(c *pb.Contract) []byte {
+	return serializePairs(
+		"order:", SerializePurchaseOrder(&pb.PurchaseRequest{
+			Offer: &pb.Offer{
+				Specs: c.Offer,
+			},
+			BuyerIaid:  c.BuyerIaid,
+			BwProfile:  c.BuyerBwProfile,
+			StartingOn: c.BuyerStartingOn,
+		}),
+		"signature_buyer:", c.BuyerSignature,
+		"timestamp:", []byte(strconv.FormatInt(c.ContractTimestamp.Seconds, 10)),
+		"br_address:", []byte(c.BrAddress),
 	)
 }
 

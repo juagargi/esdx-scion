@@ -44,7 +44,7 @@ class Contract(models.Model):
         return serialize.contract_fields_serialize_to_bytes(
             self.purchase_order.serialize_to_bytes(),
             self.purchase_order.signature,
-            self.timestamp,
+            int(self.timestamp.timestamp()),
             self.br_address,
         )
 
