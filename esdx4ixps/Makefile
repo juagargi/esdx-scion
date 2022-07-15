@@ -1,4 +1,4 @@
-.PHONY: all protobuf, test, integration
+.PHONY: all protobuf, test, test_market, test_util, integration, migration_replace, runserver
 
 all:
 
@@ -25,3 +25,6 @@ integration:
 migration_replace:
 	@rm -f market/migrations/0001_initial.py
 	@./manage.py makemigrations market
+
+runserver:
+	@python manage.py grpcrunserver localhost:50051

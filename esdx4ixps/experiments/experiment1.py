@@ -7,18 +7,12 @@
 
 from util import conversion
 from util.experiments import Runner, MarketClient
+from provider import provider
 
 import sys
 import time
 import grpc
 
-
-def provider(ia: str):
-    p = MarketClient(ia, "localhost:50051")
-    o = p.create_simplified_offer("20000")
-    saved = p.sell_offer(o)
-    print(f"provider created offer with id {saved.id}")
-    return 0
 
 
 def client(ia: str, wait: int):
@@ -79,7 +73,6 @@ def main():
         print(f"{k}:\t\t {v}")
 
     return 0
-
 
 
 if __name__ == "__main__":
