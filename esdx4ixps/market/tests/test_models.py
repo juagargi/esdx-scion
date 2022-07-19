@@ -2,6 +2,7 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 from django.test import TestCase
 from django.utils import timezone as tz
 from market.models.ases import AS
+from market.models.broker import Broker
 from market.models.contract import Contract
 from market.models.offer import Offer, BW_PERIOD
 from market.models.purchase_order import PurchaseOrder
@@ -212,6 +213,86 @@ class TestAS(TestCase):
             iaid="1-ff00:0:112", # the IA is different
             cert=cert,
         )
+
+
+class TestBroker(TestCase):
+    fixtures = ["testdata"]
+    def assertEqualKeys(self, k1, k2):
+        self.assertEqual(k1.private_numbers(), k2.private_numbers())
+
+    def assertNotEqualKeys(self, k1, k2):
+        self.assertNotEqual(k1.private_numbers(), k2.private_numbers())
+
+    def test_internal_equal_keys(self):
+        k1 = crypto.create_key()
+        k2 = crypto.create_key()
+        self.assertNotEqualKeys(k1, k2)
+        k2 = crypto.load_key(crypto.key_to_pem(k1))
+        self.assertEqualKeys(k1, k2)
+
+
+    def test_get_broker_key(self):
+        # manually load the key and compare
+        expected = crypto.load_key(Broker.objects.get().key_pem)
+        got = Broker.objects.get_broker_key()
+        self.assertEqualKeys(expected, got)
+        # modify broker
+        expected = crypto.create_key()
+        broker = Broker.objects.get()
+        broker.key_pem = crypto.key_to_pem(expected)
+        broker.save()
+        got = Broker.objects.get_broker_key()
+        self.assertEqualKeys(expected, got)
+        # remove broker
+        Broker.objects.all().delete()
+        self.assertRaises(
+            Broker.DoesNotExist,
+            Broker.objects.get_broker_key,
+        )
+        # create new broker
+        Broker.objects.create(
+            key_pem=broker.key_pem,
+            certificate_pem=broker.certificate_pem,
+        )
+        expected = crypto.load_key(Broker.objects.get().key_pem)
+        got = Broker.objects.get_broker_key()
+        self.assertEqualKeys(expected, got)
+
+    def test_get_broker_certificate(self):
+        # compare the cached cert with the manually loaded one
+        expected = crypto.load_certificate(Broker.objects.get().certificate_pem)
+        got = Broker.objects.get_broker_certificate()
+        self.assertEqual(expected, got)
+        # modify broker
+        key = crypto.create_key()
+        subj = issuer = crypto.create_x509_name("CH", "Netsec", "ETH", "broker")
+        cert = crypto.create_certificate(
+            issuer,
+            subj,
+            key,
+            datetime.datetime.utcnow(),
+            datetime.datetime.utcnow() + datetime.timedelta(days=365))
+        broker = Broker.objects.get()
+        broker.key_pem=crypto.key_to_pem(key)
+        broker.certificate_pem=crypto.certificate_to_pem(cert)
+        broker.save()
+        expected = crypto.load_certificate(Broker.objects.get().certificate_pem)
+        got = Broker.objects.get_broker_certificate()
+        self.assertEqual(expected, got)
+        # remove broker
+        Broker.objects.all().delete()
+        self.assertRaises(
+            Broker.DoesNotExist,
+            Broker.objects.get_broker_certificate,
+        )
+        # create new broker
+        Broker.objects.create(
+            key_pem=broker.key_pem,
+            certificate_pem=broker.certificate_pem,
+        )
+        expected = crypto.load_certificate(Broker.objects.get().certificate_pem)
+        got = Broker.objects.get_broker_certificate()
+        self.assertEqual(expected, got)
 
 
 class TestFindFreeBRAddress(TestCase):

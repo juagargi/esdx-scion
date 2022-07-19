@@ -128,7 +128,7 @@ class Offer(models.Model):
         # serialize to bytes
         data = self.serialize_to_bytes()
         # get key from broker
-        key = crypto.load_key(Broker.objects.get().key_pem)
+        key = Broker.objects.get_broker_key()
         # sign
         self.signature = crypto.signature_create(key, data)
 

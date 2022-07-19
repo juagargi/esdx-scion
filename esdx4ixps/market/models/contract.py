@@ -10,6 +10,7 @@ from util import crypto
 from util import serialize
 
 
+
 class Contract(models.Model):
     """
     Contract signed by the broker (IXP) when a purchase order is created.
@@ -34,7 +35,7 @@ class Contract(models.Model):
 
     def validate_signature(self):
         # get certificate
-        cert = crypto.load_certificate(Broker.objects.get().certificate_pem)
+        cert = Broker.objects.get_broker_certificate()
         # serialize purchase order
         data = self.serialize_to_bytes()
         # validate signature
@@ -51,8 +52,8 @@ class Contract(models.Model):
     def stamp_signature(self):
         """ uses now as the timestamp, and the broker as the signer """
         self.timestamp = tz.now()
-        # get private key
-        key = crypto.load_key(Broker.objects.get().key_pem)
+        # get broker's private key
+        key = Broker.objects.get_broker_key()
         # serialize contract
         data = self.serialize_to_bytes()
         # sign

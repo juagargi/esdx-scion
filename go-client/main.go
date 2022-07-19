@@ -75,7 +75,7 @@ func client(ctx context.Context, serverAddr string) {
 	}
 
 	c := pb.NewMarketControllerClient(conn)
-	for tries := 0; tries < 100; tries++ {
+	for {
 		t0 := time.Now()
 		r, err := c.ListOffers(ctx, &pb.ListRequest{})
 		if err != nil {
@@ -132,5 +132,4 @@ func client(ctx context.Context, serverAddr string) {
 		_ = t0
 		return
 	}
-	log.Fatalln("too many tries")
 }

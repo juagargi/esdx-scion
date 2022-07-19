@@ -52,7 +52,8 @@ def purchase_offer(offer: Offer,
             buyer=buyer,
             signature=buyer_signature,
             bw_profile=buyer_bw_profile,
-            starting_on=buyer_starting_on)        
+            starting_on=buyer_starting_on,
+        )
 
         # create contract
         contract = Contract(
