@@ -1,5 +1,5 @@
 from django_grpc_framework.services import Service
-from django.db import IntegrityError, transaction
+from django.db import IntegrityError, transaction, close_old_connections
 from market.models.ases import AS
 from market.models.contract import Contract
 from market.models.offer import Offer
@@ -7,11 +7,19 @@ from market.serializers import OfferProtoSerializer, ContractProtoSerializer, pb
 from market.purchases import purchase_offer
 from util.conversion import time_from_pb_timestamp
 from util import crypto
+from util import conversion
 from util import serialize
 
 import copy
 import market_pb2
 import grpc
+import threading
+import time
+
+
+# we don't allow concurrent purchases. Having a mutex is more performant than just locking
+# the DB via a transaction (although the latter is needed anyways).
+purchase_mutex = threading.Lock()
 
 
 class MarketServiceError(grpc.RpcError):
@@ -53,9 +61,10 @@ class MarketService(Service):
             raise MarketServiceError(str(ex)) from ex
 
     def Purchase(self, request: market_pb2.PurchaseRequest, context):
+        global purchase_mutex
         try:
-            with transaction.atomic():
-                offer = Offer.objects.get(id=request.offer.id)
+            with purchase_mutex, transaction.atomic():
+                offer = Offer.objects.get_available(id=request.offer.id)
                 # check that this offer matches request.offer
                 if not pb_compare_messages(request.offer, OfferProtoSerializer(offer).message):
                     raise MarketServiceError("purchase request validation failed: " + \
@@ -72,8 +81,8 @@ class MarketService(Service):
             return serializer.message
         except MarketServiceError:
             raise
-        except IntegrityError:
-            raise MarketServiceError("data was modified during the transaction")
+        except IntegrityError as ex:
+            raise MarketServiceError("data was modified during the transaction") from ex
         except Exception as ex:
             raise MarketServiceError(str(ex)) from ex
 

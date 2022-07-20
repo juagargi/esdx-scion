@@ -89,6 +89,8 @@ DATABASES = {
         'USER': 'root',
         'PASSWORD': '',
         'HOST': 'localhost',
+        # 'ATOMIC_REQUESTS': False,
+        # 'AUTO_COMMIT': False,
         'TEST': {
             'NAME': "djangotestdatabase_esdx",
         },

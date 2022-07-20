@@ -100,7 +100,7 @@ class MarketClient:
             bw_profile=bw_profile,
             price_per_unit=0.000000001,
             reachable_paths="*",
-            br_address_template="127.0.0.1:50000-50100",
+            br_address_template="127.0.0.1:50000-55000",
             br_mtu=1500,
             br_link_to="PARENT",
         )

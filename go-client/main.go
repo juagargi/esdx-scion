@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"strconv"
 	"sync"
 	"time"
 
@@ -26,18 +27,63 @@ func mainFunc() int {
 	ctx, cancelF := context.WithTimeout(context.Background(), 10*time.Minute)
 	defer cancelF()
 
+	flag.Usage = func() {
+		fmt.Fprintf(flag.CommandLine.Output(),
+			"%s FIRST [LAST [STEP]]\n"+
+				"  FIRST\tint\n"+
+				"  LAST\tint (default FIRST)\n"+
+				"  STEP\tint (default 1)\n",
+			os.Args[0])
+		flag.PrintDefaults()
+	}
 	addr := flag.String("addr", "localhost:50051", "the address to connect to")
-	nClients := flag.Int("num", 1, "number of clients")
+	useMutex := flag.Bool("mutex", false, "use a mutex in the client to avoid concurrent purchases")
 	flag.Parse()
 
-	times := make(map[int]time.Duration)
-	for i := 0; i <= *nClients; i += 10 {
-		t0 := time.Now()
-		runNClients(ctx, i, *addr)
-		times[i] = time.Since(t0)
+	if flag.NArg() < 1 {
+		fmt.Fprint(flag.CommandLine.Output(), "Need at least FIRST !!\n\n")
+		flag.Usage()
+		return 1
 	}
-	for i, d := range times {
-		fmt.Printf("%d: %v\n", i, d.Seconds())
+	parseValue := func(i, defaultValue int) int {
+		v := flag.Arg(i)
+		if v == "" {
+			return defaultValue
+		}
+		ret, err := strconv.Atoi(v)
+		if err != nil {
+			fmt.Fprintf(flag.CommandLine.Output(), "%s not an int\n\n", v)
+			flag.Usage()
+			os.Exit(1)
+		}
+		return ret
+	}
+
+	first := parseValue(0, -1)
+	last := parseValue(1, first)
+	step := parseValue(2, 1)
+	fmt.Printf("running from %d to %d with %d step\n", first, last, step)
+
+	type numAndDuration struct {
+		num int
+		dur time.Duration
+	}
+	runFcn := runNClients
+	if *useMutex {
+		fmt.Println("(using mutex on client")
+		runFcn = runNClientsWithMutex
+	}
+	times := make([]numAndDuration, 0)
+	for i := first; i <= last; i += step {
+		t0 := time.Now()
+		runFcn(ctx, i, *addr)
+		times = append(times, numAndDuration{
+			num: i,
+			dur: time.Since(t0)},
+		)
+	}
+	for _, nd := range times {
+		fmt.Printf("%4d:\t\t%20v\n", nd.num, nd.dur.Seconds())
 	}
 	return 0
 }
@@ -49,6 +95,24 @@ func runNClients(ctx context.Context, n int, serverAddr string) {
 	for i := 0; i < n; i++ {
 		go func() {
 			defer wg.Done()
+			client(ctx, serverAddr)
+			fmt.Printf(".")
+		}()
+	}
+	wg.Wait()
+	fmt.Println()
+}
+
+func runNClientsWithMutex(ctx context.Context, n int, serverAddr string) {
+	wg := sync.WaitGroup{}
+	wg.Add(n)
+	var m sync.Mutex
+	fmt.Printf("%d ", n)
+	for i := 0; i < n; i++ {
+		go func() {
+			defer wg.Done()
+			m.Lock()
+			defer m.Unlock()
 			client(ctx, serverAddr)
 			fmt.Printf(".")
 		}()
@@ -92,13 +156,7 @@ func client(ctx context.Context, serverAddr string) {
 			}
 			offers = append(offers, o)
 		}
-		// fmt.Printf("deleteme time to list: %s\n", time.Since(t0))
 		t0 = time.Now()
-		// fmt.Printf("Got %d offers:\n", len(offers))
-		// for _, o := range offers {
-		// 	fmt.Printf("ID: %d BW: %s\n", o.Id, o.Specs.BwProfile)
-		// }
-		// fmt.Println()
 		offer := offers[0]
 		req := &pb.PurchaseRequest{
 			Offer:      offer,
@@ -117,10 +175,9 @@ func client(ctx context.Context, serverAddr string) {
 		req.Signature = signature
 
 		contract, err := c.Purchase(ctx, req)
-		// fmt.Printf("deleteme time to buy: %s\n", time.Since(t0))
 		t0 = time.Now()
 		if err != nil {
-			// fmt.Printf("buying offer: %v\n", err)
+			// fmt.Fprintf(os.Stderr, "buying offer: %v\n", err)
 			continue
 		}
 		data = serialize.SerializeContract(contract)
@@ -128,7 +185,6 @@ func client(ctx context.Context, serverAddr string) {
 		if err != nil {
 			log.Fatalf("contract signature: %v", err)
 		}
-		// fmt.Printf("deleteme time to verify contract: %s\n", time.Since(t0))
 		_ = t0
 		return
 	}
