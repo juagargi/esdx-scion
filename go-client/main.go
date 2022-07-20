@@ -95,7 +95,7 @@ func runNClients(ctx context.Context, n int, serverAddr string) {
 	for i := 0; i < n; i++ {
 		go func() {
 			defer wg.Done()
-			client(ctx, serverAddr)
+			buyFirstOffer(ctx, serverAddr)
 			fmt.Printf(".")
 		}()
 	}
@@ -113,7 +113,7 @@ func runNClientsWithMutex(ctx context.Context, n int, serverAddr string) {
 			defer wg.Done()
 			m.Lock()
 			defer m.Unlock()
-			client(ctx, serverAddr)
+			buyFirstOffer(ctx, serverAddr)
 			fmt.Printf(".")
 		}()
 	}
@@ -121,13 +121,27 @@ func runNClientsWithMutex(ctx context.Context, n int, serverAddr string) {
 	fmt.Println()
 }
 
-func client(ctx context.Context, serverAddr string) {
+func buyFirstOffer(ctx context.Context, serverAddr string) {
 	conn, err := grpc.Dial(serverAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		log.Fatalf("did not connect: %v", err)
 	}
 	defer conn.Close()
 
+	key, certBroker := keyCert()
+	c := pb.NewMarketControllerClient(conn)
+	for {
+		offers := listOffers(ctx, c)
+		offer := offers[0]
+		_, err := purchaseOffer(ctx, c, offer, key, certBroker)
+		if err == nil {
+			break
+		}
+		// fmt.Fprintf(os.Stderr, "buying offer: %v\n", err)
+	}
+}
+
+func keyCert() (*crypto.Key, *crypto.Cert) {
 	// load key
 	key, err := crypto.LoadKey("../test_data/1-ff00_0_111.key")
 	if err != nil {
@@ -137,55 +151,56 @@ func client(ctx context.Context, serverAddr string) {
 	if err != nil {
 		log.Fatalf("loading broker certificate: %v", err)
 	}
+	return key, certBroker
+}
 
-	c := pb.NewMarketControllerClient(conn)
-	for {
-		t0 := time.Now()
-		r, err := c.ListOffers(ctx, &pb.ListRequest{})
-		if err != nil {
-			log.Fatalf("not listing: %v", err)
-		}
-		offers := make([]*pb.Offer, 0)
-		for {
-			o, err := r.Recv()
-			if err != nil && err != io.EOF {
-				log.Fatalf("listing offers: %v", err)
-			}
-			if err == io.EOF {
-				break
-			}
-			offers = append(offers, o)
-		}
-		t0 = time.Now()
-		offer := offers[0]
-		req := &pb.PurchaseRequest{
-			Offer:      offer,
-			BuyerIaid:  "1-ff00:0:111",
-			StartingOn: offer.Specs.Notbefore,
-			BwProfile:  "1",
-			Signature:  []byte{},
-		}
-		// prepare data
-		data := serialize.SerializePurchaseOrder(req)
-		// create signature
-		signature, err := key.Sign(data)
-		if err != nil {
-			log.Fatalf("cannot sign purchaser order: %v", err)
-		}
-		req.Signature = signature
-
-		contract, err := c.Purchase(ctx, req)
-		t0 = time.Now()
-		if err != nil {
-			// fmt.Fprintf(os.Stderr, "buying offer: %v\n", err)
-			continue
-		}
-		data = serialize.SerializeContract(contract)
-		err = certBroker.VerifySignature(data, contract.ContractSignature)
-		if err != nil {
-			log.Fatalf("contract signature: %v", err)
-		}
-		_ = t0
-		return
+func listOffers(ctx context.Context, c pb.MarketControllerClient) []*pb.Offer {
+	r, err := c.ListOffers(ctx, &pb.ListRequest{})
+	if err != nil {
+		log.Fatalf("not listing: %v", err)
 	}
+	offers := make([]*pb.Offer, 0)
+	for {
+		o, err := r.Recv()
+		if err != nil && err != io.EOF {
+			log.Fatalf("listing offers: %v", err)
+		}
+		if err == io.EOF {
+			break
+		}
+		offers = append(offers, o)
+	}
+	return offers
+}
+
+func purchaseOffer(ctx context.Context, c pb.MarketControllerClient,
+	offer *pb.Offer, key *crypto.Key, certBroker *crypto.Cert) (*pb.Contract, error) {
+
+	req := &pb.PurchaseRequest{
+		Offer:      offer,
+		BuyerIaid:  "1-ff00:0:111",
+		StartingOn: offer.Specs.Notbefore,
+		BwProfile:  "1",
+		Signature:  []byte{},
+	}
+	// prepare data
+	data := serialize.SerializePurchaseOrder(req)
+	// create signature
+	signature, err := key.Sign(data)
+	if err != nil {
+		log.Fatalf("cannot sign purchaser order: %v", err)
+	}
+	req.Signature = signature
+
+	contract, err := c.Purchase(ctx, req)
+
+	if err != nil {
+		return nil, err
+	}
+	data = serialize.SerializeContract(contract)
+	err = certBroker.VerifySignature(data, contract.ContractSignature)
+	if err != nil {
+		log.Fatalf("contract signature: %v", err)
+	}
+	return contract, nil
 }
