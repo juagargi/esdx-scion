@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math/rand"
 	"os"
 	"strconv"
 	"sync"
@@ -38,7 +39,25 @@ func mainFunc() int {
 	}
 	addr := flag.String("addr", "localhost:50051", "the address to connect to")
 	useMutex := flag.Bool("mutex", false, "use a mutex in the client to avoid concurrent purchases")
+	experiment := flag.String("experiment", "", "experiment to run; one of: "+
+		"{firstOffer,randomOffer,gaussianOffer,justOnce}")
 	flag.Parse()
+
+	var experimentFcn func(context.Context, string)
+	switch *experiment {
+	case "firstOffer":
+		experimentFcn = experimentBuyFirstOffer
+	case "randomOffer":
+		experimentFcn = experimentBuyRandomOffer
+	case "gaussianOffer":
+		experimentFcn = experimentBuyNormalDistributedOffer
+	case "justOnce":
+		experimentFcn = experimentGetFirstResponse
+	default:
+		fmt.Fprint(flag.CommandLine.Output(), "wrong experiment type !!\n\n")
+		flag.Usage()
+		return 1
+	}
 
 	if flag.NArg() < 1 {
 		fmt.Fprint(flag.CommandLine.Output(), "Need at least FIRST !!\n\n")
@@ -76,7 +95,7 @@ func mainFunc() int {
 	times := make([]numAndDuration, 0)
 	for i := first; i <= last; i += step {
 		t0 := time.Now()
-		runFcn(ctx, i, *addr)
+		runFcn(ctx, experimentFcn, i, *addr)
 		times = append(times, numAndDuration{
 			num: i,
 			dur: time.Since(t0)},
@@ -88,14 +107,17 @@ func mainFunc() int {
 	return 0
 }
 
-func runNClients(ctx context.Context, n int, serverAddr string) {
+func runNClients(ctx context.Context, experiment func(context.Context, string), n int,
+	serverAddr string) {
+
 	wg := sync.WaitGroup{}
 	wg.Add(n)
 	fmt.Printf("%d ", n)
 	for i := 0; i < n; i++ {
 		go func() {
 			defer wg.Done()
-			buyFirstOffer(ctx, serverAddr)
+			// buyFirstOffer(ctx, serverAddr)
+			experiment(ctx, serverAddr)
 			fmt.Printf(".")
 		}()
 	}
@@ -103,7 +125,9 @@ func runNClients(ctx context.Context, n int, serverAddr string) {
 	fmt.Println()
 }
 
-func runNClientsWithMutex(ctx context.Context, n int, serverAddr string) {
+func runNClientsWithMutex(ctx context.Context, experiment func(context.Context, string), n int,
+	serverAddr string) {
+
 	wg := sync.WaitGroup{}
 	wg.Add(n)
 	var m sync.Mutex
@@ -113,7 +137,7 @@ func runNClientsWithMutex(ctx context.Context, n int, serverAddr string) {
 			defer wg.Done()
 			m.Lock()
 			defer m.Unlock()
-			buyFirstOffer(ctx, serverAddr)
+			experiment(ctx, serverAddr)
 			fmt.Printf(".")
 		}()
 	}
@@ -121,7 +145,31 @@ func runNClientsWithMutex(ctx context.Context, n int, serverAddr string) {
 	fmt.Println()
 }
 
-func buyFirstOffer(ctx context.Context, serverAddr string) {
+func experimentBuyFirstOffer(ctx context.Context, serverAddr string) {
+	buyOffer(ctx, serverAddr, func(offers []*pb.Offer) *pb.Offer {
+		return offers[0]
+	})
+}
+
+func experimentBuyRandomOffer(ctx context.Context, serverAddr string) {
+	// experimentBuyNomalDistributedOffer
+	rand.NormFloat64()
+	buyOffer(ctx, serverAddr, func(offers []*pb.Offer) *pb.Offer {
+		return offers[rand.Intn(len(offers))]
+	})
+}
+
+// experimentBuyNormalDistributedOffer
+// the range of the gaussian based selection is [-4*sigma, 4*sigma],
+// 8*sigma = len(offers) -> sigma = len(offers)/8
+func experimentBuyNormalDistributedOffer(ctx context.Context, serverAddr string) {
+	buyOffer(ctx, serverAddr, func(offers []*pb.Offer) *pb.Offer {
+		i := rand.NormFloat64()*float64(len(offers))/8 + float64(len(offers))/2
+		return offers[int(i)]
+	})
+}
+
+func experimentGetFirstResponse(ctx context.Context, serverAddr string) {
 	conn, err := grpc.Dial(serverAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		log.Fatalf("did not connect: %v", err)
@@ -130,15 +178,9 @@ func buyFirstOffer(ctx context.Context, serverAddr string) {
 
 	key, certBroker := keyCert()
 	c := pb.NewMarketControllerClient(conn)
-	for {
-		offers := listOffers(ctx, c)
-		offer := offers[0]
-		_, err := purchaseOffer(ctx, c, offer, key, certBroker)
-		if err == nil {
-			break
-		}
-		// fmt.Fprintf(os.Stderr, "buying offer: %v\n", err)
-	}
+	offers := listOffers(ctx, c)
+	offer := offers[0]
+	_, _ = purchaseOffer(ctx, c, offer, key, certBroker)
 }
 
 func keyCert() (*crypto.Key, *crypto.Cert) {
@@ -203,4 +245,24 @@ func purchaseOffer(ctx context.Context, c pb.MarketControllerClient,
 		log.Fatalf("contract signature: %v", err)
 	}
 	return contract, nil
+}
+
+func buyOffer(ctx context.Context, serverAddr string, offerSelecter func([]*pb.Offer) *pb.Offer) {
+	conn, err := grpc.Dial(serverAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		log.Fatalf("did not connect: %v", err)
+	}
+	defer conn.Close()
+
+	key, certBroker := keyCert()
+	c := pb.NewMarketControllerClient(conn)
+	for {
+		offers := listOffers(ctx, c)
+		offer := offerSelecter(offers)
+		_, err := purchaseOffer(ctx, c, offer, key, certBroker)
+		if err == nil {
+			break
+		}
+		// fmt.Fprintf(os.Stderr, "buying offer: %v\n", err)
+	}
 }

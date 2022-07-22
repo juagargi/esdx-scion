@@ -9,9 +9,10 @@ import sys
 
 def provider(ia: str):
     p = MarketClient(ia, "localhost:50051")
-    o = p.create_simplified_offer("20000")
-    saved = p.sell_offer(o)
-    print(f"provider created offer with id {saved.id}")
+    for i in range(10):
+        o = p.create_simplified_offer("20000")
+        saved = p.sell_offer(o)
+        print(f"provider created offer with id {saved.id}")
     return 0
 
 
