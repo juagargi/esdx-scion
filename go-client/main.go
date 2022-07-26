@@ -41,9 +41,10 @@ func mainFunc() int {
 	useMutex := flag.Bool("mutex", false, "use a mutex in the client to avoid concurrent purchases")
 	experiment := flag.String("experiment", "", "experiment to run; one of: "+
 		"{firstOffer,randomOffer,gaussianOffer,justOnce}")
+	equivalentOffer := flag.Bool("equivalent", false, "allow purchasing equivalent offer")
 	flag.Parse()
 
-	var experimentFcn func(context.Context, string)
+	var experimentFcn func(context.Context, string, bool)
 	switch *experiment {
 	case "firstOffer":
 		experimentFcn = experimentBuyFirstOffer
@@ -95,7 +96,7 @@ func mainFunc() int {
 	times := make([]numAndDuration, 0)
 	for i := first; i <= last; i += step {
 		t0 := time.Now()
-		runFcn(ctx, experimentFcn, i, *addr)
+		runFcn(ctx, experimentFcn, i, *addr, *equivalentOffer)
 		times = append(times, numAndDuration{
 			num: i,
 			dur: time.Since(t0)},
@@ -107,8 +108,8 @@ func mainFunc() int {
 	return 0
 }
 
-func runNClients(ctx context.Context, experiment func(context.Context, string), n int,
-	serverAddr string) {
+func runNClients(ctx context.Context, experiment func(context.Context, string, bool), n int,
+	serverAddr string, allowEquivalentOffer bool) {
 
 	wg := sync.WaitGroup{}
 	wg.Add(n)
@@ -116,8 +117,7 @@ func runNClients(ctx context.Context, experiment func(context.Context, string), 
 	for i := 0; i < n; i++ {
 		go func() {
 			defer wg.Done()
-			// buyFirstOffer(ctx, serverAddr)
-			experiment(ctx, serverAddr)
+			experiment(ctx, serverAddr, allowEquivalentOffer)
 			fmt.Printf(".")
 		}()
 	}
@@ -125,8 +125,8 @@ func runNClients(ctx context.Context, experiment func(context.Context, string), 
 	fmt.Println()
 }
 
-func runNClientsWithMutex(ctx context.Context, experiment func(context.Context, string), n int,
-	serverAddr string) {
+func runNClientsWithMutex(ctx context.Context, experiment func(context.Context, string, bool), n int,
+	serverAddr string, allowEquivalentOffer bool) {
 
 	wg := sync.WaitGroup{}
 	wg.Add(n)
@@ -137,7 +137,7 @@ func runNClientsWithMutex(ctx context.Context, experiment func(context.Context, 
 			defer wg.Done()
 			m.Lock()
 			defer m.Unlock()
-			experiment(ctx, serverAddr)
+			experiment(ctx, serverAddr, allowEquivalentOffer)
 			fmt.Printf(".")
 		}()
 	}
@@ -145,31 +145,32 @@ func runNClientsWithMutex(ctx context.Context, experiment func(context.Context, 
 	fmt.Println()
 }
 
-func experimentBuyFirstOffer(ctx context.Context, serverAddr string) {
+func experimentBuyFirstOffer(ctx context.Context, serverAddr string, allowEquivalentOffer bool) {
 	buyOffer(ctx, serverAddr, func(offers []*pb.Offer) *pb.Offer {
 		return offers[0]
-	})
+	}, allowEquivalentOffer)
 }
 
-func experimentBuyRandomOffer(ctx context.Context, serverAddr string) {
-	// experimentBuyNomalDistributedOffer
+func experimentBuyRandomOffer(ctx context.Context, serverAddr string, allowEquivalentOffer bool) {
 	rand.NormFloat64()
 	buyOffer(ctx, serverAddr, func(offers []*pb.Offer) *pb.Offer {
 		return offers[rand.Intn(len(offers))]
-	})
+	}, allowEquivalentOffer)
 }
 
 // experimentBuyNormalDistributedOffer
 // the range of the gaussian based selection is [-4*sigma, 4*sigma],
 // 8*sigma = len(offers) -> sigma = len(offers)/8
-func experimentBuyNormalDistributedOffer(ctx context.Context, serverAddr string) {
+func experimentBuyNormalDistributedOffer(ctx context.Context, serverAddr string,
+	allowEquivalentOffer bool) {
+
 	buyOffer(ctx, serverAddr, func(offers []*pb.Offer) *pb.Offer {
 		i := rand.NormFloat64()*float64(len(offers))/8 + float64(len(offers))/2
 		return offers[int(i)]
-	})
+	}, allowEquivalentOffer)
 }
 
-func experimentGetFirstResponse(ctx context.Context, serverAddr string) {
+func experimentGetFirstResponse(ctx context.Context, serverAddr string, allowEquivalentOffer bool) {
 	conn, err := grpc.Dial(serverAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		log.Fatalf("did not connect: %v", err)
@@ -180,7 +181,7 @@ func experimentGetFirstResponse(ctx context.Context, serverAddr string) {
 	c := pb.NewMarketControllerClient(conn)
 	offers := listOffers(ctx, c)
 	offer := offers[0]
-	_, _ = purchaseOffer(ctx, c, offer, key, certBroker)
+	_, _ = purchaseOffer(ctx, c, offer, allowEquivalentOffer, key, certBroker)
 }
 
 func keyCert() (*crypto.Key, *crypto.Cert) {
@@ -215,8 +216,8 @@ func listOffers(ctx context.Context, c pb.MarketControllerClient) []*pb.Offer {
 	return offers
 }
 
-func purchaseOffer(ctx context.Context, c pb.MarketControllerClient,
-	offer *pb.Offer, key *crypto.Key, certBroker *crypto.Cert) (*pb.Contract, error) {
+func purchaseOffer(ctx context.Context, c pb.MarketControllerClient, offer *pb.Offer,
+	allowEquivalent bool, key *crypto.Key, certBroker *crypto.Cert) (*pb.Contract, error) {
 
 	req := &pb.PurchaseRequest{
 		Offer:      offer,
@@ -234,12 +235,17 @@ func purchaseOffer(ctx context.Context, c pb.MarketControllerClient,
 	}
 	req.Signature = signature
 
-	contract, err := c.Purchase(ctx, req)
+	var contract *pb.Contract
+	if allowEquivalent {
+		contract, err = c.PurchaseEquivalent(ctx, req)
+	} else {
+		contract, err = c.Purchase(ctx, req)
+	}
 
 	if err != nil {
 		return nil, err
 	}
-	data = serialize.SerializeContract(contract)
+	data = serialize.SerializeContract(contract, offer.Specs)
 	err = certBroker.VerifySignature(data, contract.ContractSignature)
 	if err != nil {
 		log.Fatalf("contract signature: %v", err)
@@ -247,7 +253,9 @@ func purchaseOffer(ctx context.Context, c pb.MarketControllerClient,
 	return contract, nil
 }
 
-func buyOffer(ctx context.Context, serverAddr string, offerSelecter func([]*pb.Offer) *pb.Offer) {
+func buyOffer(ctx context.Context, serverAddr string, offerSelecter func([]*pb.Offer) *pb.Offer,
+	allowEquivalentOffer bool) {
+
 	conn, err := grpc.Dial(serverAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		log.Fatalf("did not connect: %v", err)
@@ -259,7 +267,7 @@ func buyOffer(ctx context.Context, serverAddr string, offerSelecter func([]*pb.O
 	for {
 		offers := listOffers(ctx, c)
 		offer := offerSelecter(offers)
-		_, err := purchaseOffer(ctx, c, offer, key, certBroker)
+		_, err := purchaseOffer(ctx, c, offer, allowEquivalentOffer, key, certBroker)
 		if err == nil {
 			break
 		}

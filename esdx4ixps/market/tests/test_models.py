@@ -315,6 +315,7 @@ class TestFindFreeBRAddress(TestCase):
         )
         return purchase_offer(
             offer,
+            offer,
             "1-ff00:0:111",
             starting_on,
             bw_profile,

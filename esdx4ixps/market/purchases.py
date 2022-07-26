@@ -1,4 +1,6 @@
 from datetime import datetime
+import traceback
+from urllib import request
 from django.db import transaction
 from typing import Tuple
 from cryptography.hazmat.primitives.asymmetric import rsa
@@ -31,41 +33,50 @@ def find_available_br_address(offer: Offer) -> str:
     return conversion.ip_port_to_str(ip, port)
 
 
-def purchase_offer(offer: Offer,
-                   buyer_iaid: str,
-                   buyer_starting_on: datetime,
-                   buyer_bw_profile: str,
-                   buyer_signature: bytes) -> Tuple[Contract, Offer]:
+def purchase_offer(
+    requested_offer: Offer,
+    available_offer: Offer,
+    buyer_iaid: str,
+    buyer_starting_on: datetime,
+    buyer_bw_profile: str,
+    buyer_signature: bytes,
+) -> Tuple[Contract, Offer]:
     """
     Returns the contract and the new offer
+    requested_offer: the offer that was originally specified in the purchase order
+    available_offer: the offer that being derived from the requested_offer is still available
     """
     with transaction.atomic():
         # find buyer
         buyer = AS.objects.get(iaid=buyer_iaid)
-        new_profile = offer.purchase(buyer_bw_profile, buyer_starting_on)
+        new_profile = available_offer.purchase(buyer_bw_profile, buyer_starting_on)
         if new_profile is None:
             raise RuntimeError("offer does not contain the requested BW profile")
 
         # create purchase order will already validate the signature:
         purchase_order = PurchaseOrder.objects.create(
-            offer_id=offer.id,
+            offer_id=available_offer.id,
             buyer=buyer,
             signature=buyer_signature,
             bw_profile=buyer_bw_profile,
             starting_on=buyer_starting_on,
         )
+        # validate the purchase order signature with the original requested offer
+        purchase_order.validate_signature(requested_offer)
 
         # create contract
         contract = Contract(
             purchase_order=purchase_order,
         )
-        contract.br_address = find_available_br_address(offer)
-        contract.stamp_signature()
+        contract.br_address = find_available_br_address(available_offer)
+        contract.stamp_signature(requested_offer)
         contract.save()
+        # validate the contract using the purchase order with the original requested offer:
+        contract.validate_signature(requested_offer)
         # create new offer
-        new_offer = copy.deepcopy(offer)
+        new_offer = available_offer.clone()
         new_offer.id = None
-        new_offer.deprecates = offer
+        new_offer.deprecates = available_offer
         new_offer.bw_profile = new_profile
         new_offer.sign_with_broker()
         new_offer.save()

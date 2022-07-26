@@ -18,6 +18,7 @@ service MarketController {
     // everytime a new client buys something
     rpc AddOffer(OfferSpecification) returns (Offer) {}
     rpc Purchase(PurchaseRequest) returns (Contract) {}
+    rpc PurchaseEquivalent(PurchaseRequest) returns (Contract) {}
     rpc GetContract(GetContractRequest) returns (Contract) {}
 }
 

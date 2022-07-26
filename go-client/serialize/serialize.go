@@ -33,11 +33,11 @@ func SerializePurchaseOrder(o *pb.PurchaseRequest) []byte {
 	)
 }
 
-func SerializeContract(c *pb.Contract) []byte {
+func SerializeContract(c *pb.Contract, requestedOffer *pb.OfferSpecification) []byte {
 	return serializePairs(
 		"order:", SerializePurchaseOrder(&pb.PurchaseRequest{
 			Offer: &pb.Offer{
-				Specs: c.Offer,
+				Specs: requestedOffer,
 			},
 			BuyerIaid:  c.BuyerIaid,
 			BwProfile:  c.BuyerBwProfile,

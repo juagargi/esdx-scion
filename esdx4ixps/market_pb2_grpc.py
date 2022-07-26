@@ -33,6 +33,11 @@ class MarketControllerStub(object):
                 request_serializer=market__pb2.PurchaseRequest.SerializeToString,
                 response_deserializer=market__pb2.Contract.FromString,
                 )
+        self.PurchaseEquivalent = channel.unary_unary(
+                '/market.MarketController/PurchaseEquivalent',
+                request_serializer=market__pb2.PurchaseRequest.SerializeToString,
+                response_deserializer=market__pb2.Contract.FromString,
+                )
         self.GetContract = channel.unary_unary(
                 '/market.MarketController/GetContract',
                 request_serializer=market__pb2.GetContractRequest.SerializeToString,
@@ -67,6 +72,12 @@ class MarketControllerServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def PurchaseEquivalent(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
     def GetContract(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
@@ -88,6 +99,11 @@ def add_MarketControllerServicer_to_server(servicer, server):
             ),
             'Purchase': grpc.unary_unary_rpc_method_handler(
                     servicer.Purchase,
+                    request_deserializer=market__pb2.PurchaseRequest.FromString,
+                    response_serializer=market__pb2.Contract.SerializeToString,
+            ),
+            'PurchaseEquivalent': grpc.unary_unary_rpc_method_handler(
+                    servicer.PurchaseEquivalent,
                     request_deserializer=market__pb2.PurchaseRequest.FromString,
                     response_serializer=market__pb2.Contract.SerializeToString,
             ),
@@ -156,6 +172,23 @@ class MarketController(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/market.MarketController/Purchase',
+            market__pb2.PurchaseRequest.SerializeToString,
+            market__pb2.Contract.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def PurchaseEquivalent(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/market.MarketController/PurchaseEquivalent',
             market__pb2.PurchaseRequest.SerializeToString,
             market__pb2.Contract.FromString,
             options, channel_credentials,

@@ -13,6 +13,7 @@ from util.conversion import csv_to_intlist, ia_validator
 from util import conversion
 from util import crypto
 from util import serialize
+from typing import Tuple
 
 
 class OfferManager(models.Manager):
@@ -23,7 +24,7 @@ class OfferManager(models.Manager):
     def available(self, *args, **kwargs):
         return self.filter(deprecated_by=None, *args, **kwargs)
 
-    def get_available(self, *args, **kwargs):
+    def get_available(self, *args, **kwargs) -> "Offer":
         l = self.available(*args, **kwargs)
         if len(l) == 0:
             raise Offer.DoesNotExist()
@@ -31,6 +32,17 @@ class OfferManager(models.Manager):
             raise Offer.MultipleObjectsReturned()
         else:
             return l[0]
+
+    def get_derived(self, *args, **kwargs) -> Tuple["Offer", "Offer"]:
+        """ returns the exact requested Offer and the derived one """
+        exact = self.get(*args, **kwargs)
+        # walk the "deprecated_by" chain until one offer is available (or error)
+        avail = exact
+        while not avail.is_available():
+            avail = avail.deprecated_by
+        if avail.is_sold():
+            raise Offer.DoesNotExist(f"derived available offer does not exist")
+        return (exact, avail)
 
 class Offer(models.Model):
     class Meta:
@@ -66,6 +78,23 @@ class Offer(models.Model):
                                       blank=True,
                                       on_delete=models.SET_NULL,
                                       related_name="deprecated_by")
+
+    def clone(self: "Offer") -> "Offer":
+        return Offer(
+            iaid=self.iaid,
+            signature=self.signature,
+            notbefore=self.notbefore,
+            notafter=self.notafter,
+            reachable_paths=self.reachable_paths,
+            qos_class=self.qos_class,
+            price_per_unit=self.price_per_unit,
+            bw_profile=self.bw_profile,
+            br_address_template=self.br_address_template,
+            br_mtu=self.br_mtu,
+            br_link_to=self.br_link_to,
+            deprecates=self.deprecates,
+        )
+        # return copy.deepcopy(o)
 
     def _pre_save(self):
         """ Checks validity, profile length """
@@ -138,6 +167,10 @@ class Offer(models.Model):
     def is_sold(self):
         """ returns true if there exists a purchase order for this offer """
         return hasattr(self, "purchase_order")
+
+    def is_available(self):
+        """ returns true if this offer is not deprecated by an existing other offer """
+        return not hasattr(self, "deprecated_by")
 
     def purchase(self, bw_profile: str, starting: datetime) -> str:
         """

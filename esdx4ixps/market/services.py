@@ -60,18 +60,24 @@ class MarketService(Service):
         except Exception as ex:
             raise MarketServiceError(str(ex)) from ex
 
-    def Purchase(self, request: market_pb2.PurchaseRequest, context):
+    def _purchase(
+        self,
+        request: market_pb2.PurchaseRequest,
+        context,
+        offers_getter,
+    ):
         global purchase_mutex
         try:
             with purchase_mutex, transaction.atomic():
-                offer = Offer.objects.get_available(id=request.offer.id)
+                requested_offer, available_offer = offers_getter()
                 # check that this offer matches request.offer
-                if not pb_compare_messages(request.offer, OfferProtoSerializer(offer).message):
+                if not pb_compare_messages(request.offer, OfferProtoSerializer(requested_offer).message):
                     raise MarketServiceError("purchase request validation failed: " + \
                         f"offer with ID {request.offer.id} not the same as in the request")
                 # create contract and new offer
                 contract, _ = purchase_offer(
-                    offer,
+                    requested_offer,
+                    available_offer,
                     request.buyer_iaid,
                     time_from_pb_timestamp(request.starting_on),
                     request.bw_profile,
@@ -85,6 +91,25 @@ class MarketService(Service):
             raise MarketServiceError("data was modified during the transaction") from ex
         except Exception as ex:
             raise MarketServiceError(str(ex)) from ex
+
+    def Purchase(self, request: market_pb2.PurchaseRequest, context):
+        def get_offer():
+            o = Offer.objects.get_available(id=request.offer.id)
+            return o, o
+        return self._purchase(
+            request,
+            context,
+            get_offer,
+        )
+
+    def PurchaseEquivalent(self, request: market_pb2.PurchaseRequest, context):
+        def get_offer():
+            return Offer.objects.get_derived(id=request.offer.id)
+        return self._purchase(
+            request,
+            context,
+            get_offer,
+        )
 
     def GetContract(self, request: market_pb2.GetContractRequest, context):
         try:

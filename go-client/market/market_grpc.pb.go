@@ -27,6 +27,7 @@ type MarketControllerClient interface {
 	// everytime a new client buys something
 	AddOffer(ctx context.Context, in *OfferSpecification, opts ...grpc.CallOption) (*Offer, error)
 	Purchase(ctx context.Context, in *PurchaseRequest, opts ...grpc.CallOption) (*Contract, error)
+	PurchaseEquivalent(ctx context.Context, in *PurchaseRequest, opts ...grpc.CallOption) (*Contract, error)
 	GetContract(ctx context.Context, in *GetContractRequest, opts ...grpc.CallOption) (*Contract, error)
 }
 
@@ -88,6 +89,15 @@ func (c *marketControllerClient) Purchase(ctx context.Context, in *PurchaseReque
 	return out, nil
 }
 
+func (c *marketControllerClient) PurchaseEquivalent(ctx context.Context, in *PurchaseRequest, opts ...grpc.CallOption) (*Contract, error) {
+	out := new(Contract)
+	err := c.cc.Invoke(ctx, "/market.MarketController/PurchaseEquivalent", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *marketControllerClient) GetContract(ctx context.Context, in *GetContractRequest, opts ...grpc.CallOption) (*Contract, error) {
 	out := new(Contract)
 	err := c.cc.Invoke(ctx, "/market.MarketController/GetContract", in, out, opts...)
@@ -106,6 +116,7 @@ type MarketControllerServer interface {
 	// everytime a new client buys something
 	AddOffer(context.Context, *OfferSpecification) (*Offer, error)
 	Purchase(context.Context, *PurchaseRequest) (*Contract, error)
+	PurchaseEquivalent(context.Context, *PurchaseRequest) (*Contract, error)
 	GetContract(context.Context, *GetContractRequest) (*Contract, error)
 	mustEmbedUnimplementedMarketControllerServer()
 }
@@ -122,6 +133,9 @@ func (UnimplementedMarketControllerServer) AddOffer(context.Context, *OfferSpeci
 }
 func (UnimplementedMarketControllerServer) Purchase(context.Context, *PurchaseRequest) (*Contract, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Purchase not implemented")
+}
+func (UnimplementedMarketControllerServer) PurchaseEquivalent(context.Context, *PurchaseRequest) (*Contract, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method PurchaseEquivalent not implemented")
 }
 func (UnimplementedMarketControllerServer) GetContract(context.Context, *GetContractRequest) (*Contract, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetContract not implemented")
@@ -196,6 +210,24 @@ func _MarketController_Purchase_Handler(srv interface{}, ctx context.Context, de
 	return interceptor(ctx, in, info, handler)
 }
 
+func _MarketController_PurchaseEquivalent_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PurchaseRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MarketControllerServer).PurchaseEquivalent(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/market.MarketController/PurchaseEquivalent",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MarketControllerServer).PurchaseEquivalent(ctx, req.(*PurchaseRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _MarketController_GetContract_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GetContractRequest)
 	if err := dec(in); err != nil {
@@ -228,6 +260,10 @@ var MarketController_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Purchase",
 			Handler:    _MarketController_Purchase_Handler,
+		},
+		{
+			MethodName: "PurchaseEquivalent",
+			Handler:    _MarketController_PurchaseEquivalent_Handler,
 		},
 		{
 			MethodName: "GetContract",
