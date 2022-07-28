@@ -23,7 +23,7 @@ import (
 	"github.com/vishvananda/netlink"
 )
 
-//go:generate go run github.com/cilium/ebpf/cmd/bpf2go -cc clang -cflags "-O2 -g" Esdx bpf/monitor.c -- -I./libbpf/src
+//go:generate go run github.com/cilium/ebpf/cmd/bpf2go -cc clang -cflags "-O2 -g" Esdx bpf/monitor.c -- -I./libbpf/src -I/usr/include/x86_64-linux-gnu
 
 const (
 	UPSTREAM   = 0
