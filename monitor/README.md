@@ -56,6 +56,13 @@ router to match the ingress traffic profile.
 
 Development
 -----------
+Requirements:
+- Kernel >= 5.8 (for BPF ring buffers, see https://github.com/iovisor/bcc/blob/master/docs/kernel-versions.md)
+  - Ubuntu >= 22.04 (https://ubuntu.com/about/release-cycle#ubuntu-kernel-release-cycle)
+  - Ubuntu >= 20.04.5
+- A current release of Go
+- llvm and clang
+
 Make sure the `libbpf` submodule is initialized, as we need some libbpf headers to compile the BPF
 part of the monitor. Since we only need the headers, it is not necessary to build libbpf.
 
@@ -70,12 +77,16 @@ go build
 ```
 
 There is an example SCION topology mirroring the figure above in [test/topology](./test/topology).
-It requires Docker and docker-compose, as well as a copy of
-[SCION](https://github.com/netsec-ethz/scion) and
-[SCION-Apps](https://github.com/netsec-ethz/scion-apps).
+Requirements for the example topology:
+- Docker and docker-compose (https://docs.docker.com/engine/install/ubuntu/)
+- jq (`sudo apt install jq`)
+- yq (`pip3 install yq`)
+- [SCION](https://github.com/netsec-ethz/scion)
+- [SCION-Apps](https://github.com/netsec-ethz/scion-apps)
 
-Set environment variables `SCION_ROOT` (default: `$HOME/scion`) and `SCION_APPS`
-(default: `$HOME/scion-apps`) to point to the SCION and scion-apps source trees, respectively.
+Build SCION and (if you need them) the SCION apps. Set the environment variables `SCION_ROOT`
+(default: `$HOME/scion`) and `SCION_APPS` (default: `$HOME/scion-apps`) to point to the SCION and
+scion-apps source trees, respectively.
 
 The topology can be run by typing
 ```bash
