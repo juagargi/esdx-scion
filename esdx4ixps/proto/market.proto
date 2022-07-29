@@ -1,0 +1,76 @@
+syntax = "proto3";
+
+option go_package = "esdx_scion/market";
+
+package market;
+
+import "google/protobuf/timestamp.proto";
+
+
+// TODO(juagargi) the data types used allow easy integration with the ones from Django.
+// Despite this, we need to change them here to be more adequate. E.g. change
+// Offer.bw_profile from a string to a repeated int32
+
+
+service MarketController {
+    rpc ListOffers(ListRequest) returns (stream Offer) {}
+    // TODO(juagargi) this should open a channel where the provider would get contracts
+    // everytime a new client buys something
+    rpc AddOffer(OfferSpecification) returns (Offer) {}
+    rpc Purchase(PurchaseRequest) returns (Contract) {}
+    rpc PurchaseEquivalent(PurchaseRequest) returns (Contract) {}
+    rpc GetContract(GetContractRequest) returns (Contract) {}
+}
+
+message ListRequest {}
+
+// Immutable values an offer has. These are constant throughout the life of the offer.
+message OfferSpecification {
+    string iaid = 1;
+    google.protobuf.Timestamp notbefore = 3;
+    google.protobuf.Timestamp notafter = 4;
+    string reachable_paths = 5;
+    int32 qos_class = 6;
+    double price_per_unit = 7; // price of 600 * 1 Megabits (BW_PERIOD * BW_STEP)
+    string bw_profile = 8;
+    string br_address_template = 9; // e.g. 1.1.1.1:50-100 (use 1.1.1.1, ports from 50 to 100)
+    int32 br_mtu = 10; // the mtu to use in the link
+    string br_link_to = 11; // the type of link: PARENT, CORE or PEER
+    bytes signature = 50; // the signature checks all the previous fields
+}
+
+message Offer {
+    int64 id = 1;  // the ID of this offer
+    OfferSpecification specs = 2;
+}
+
+message PurchaseRequest {
+    // information about the offer:
+    Offer offer = 1;
+    // buyer information:
+    string buyer_iaid = 11; // ISD-AS ID of the buyer
+    string bw_profile = 12;
+    google.protobuf.Timestamp starting_on = 13;
+    bytes signature = 14; // over all fields except offer_id
+}
+
+message Contract {
+    int64 contract_id = 1;
+    google.protobuf.Timestamp contract_timestamp = 2;
+    // the signature from the broker (IXP) covers all fields
+    bytes contract_signature = 3;
+    // details about the offer:
+    OfferSpecification offer = 10;
+    string br_address = 11;
+    // details about the buyer
+    string buyer_iaid = 50;
+    google.protobuf.Timestamp buyer_starting_on = 51;
+    string buyer_bw_profile = 52;
+    bytes buyer_signature = 53;
+}
+
+message GetContractRequest {
+    int64 contract_id = 1;
+    string requester_iaid = 2;
+    bytes requester_signature = 3;
+}

@@ -1,0 +1,54 @@
+# Spot Market
+
+The spot market is a virtual market where sellers can post their bandwidth offers
+on the whiteboard, and buyers can buy part or the total amount of the offer.
+
+An offer contains a bandwidth profile (bandwidth vs time) and a path policy (what ASes can
+be reached using this offer).
+
+## Development
+
+### Install pip packages:
+```bash
+rm -rf .venv
+python3 -m venv .venv
+echo '*' > .venv/.gitignore
+source .venv/bin/activate
+pip install --require-hashes -r requirements.txt
+```
+
+### Add new dependencies:
+The project uses pip-tools. Edit the `requirements.in` file and generate a new `requirements.txt`
+for pip to use:
+```bash
+pip-compile --generate-hashes --allow-unsafe --output-file=requirements.txt requirements.in
+```
+
+### Run tests
+Ensure you are in the directory containing the `manage.py` file.
+Then activate the virtual environment created above, if not active already
+```bash
+source .venv/bin/activate
+```
+
+And then run
+```bash
+make test
+make integration
+```
+
+## Mysql
+
+apt packages:
+
+- libmysqlclient-dev
+- python3-dev
+
+pip packages:
+- mysqlclient
+
+Don't forget to create the DB:
+```sql
+DROP SCHEMA IF EXISTS djangodatabase;
+CREATE SCHEMA djangodatabase;
+```
